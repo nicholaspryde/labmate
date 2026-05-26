@@ -54,7 +54,7 @@ export function ExportDialog({ series, triggerLabel = "Export", triggerClassName
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" disabled={series.length === 0} className={cn(triggerClassName)}>
+        <Button type="button" variant="ghost" disabled={series.length === 0} className={cn(triggerClassName)}>
           {triggerLabel}
         </Button>
       </DialogTrigger>

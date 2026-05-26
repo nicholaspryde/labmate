@@ -1,4 +1,4 @@
-export type OffsetMode = "from-start" | "from-previous";
+export type OffsetMode = "from-start" | "from-previous" | "custom";
 
 export type Offset = {
   days: number;
@@ -11,6 +11,7 @@ export type Timepoint = {
   name: string;
   description: string;
   offsetFromStartMinutes: number;
+  relativeToTimepointId?: string;
   hasScheduledTime?: boolean;
   durationMinutes?: number;
 };
@@ -30,3 +31,6 @@ export type AppState = {
 };
 
 export const DEFAULT_ANCHOR_NAME = "Anchor";
+
+/** Sentinel stored in `relativeToTimepointId` to mean "always relative to the immediately previous timepoint". */
+export const RELATIVE_TO_PREVIOUS = "__previous__";

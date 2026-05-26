@@ -1,65 +1,80 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import type { EventDropArg, EventInput } from "@fullcalendar/core";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { IlamyCalendar, type CalendarEvent } from "@ilamy/calendar";
+import { useEffect, useRef, useState } from "react";
+import "@/lib/dayjs";
+import { formatCalendarPreviewLabel, type CalendarEventData } from "@/lib/calendarMapping";
 import { dayDeltaFromDates } from "@/lib/timepointMath";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type CalendarPreviewProps = {
-  events: EventInput[];
+  events: Parameters<typeof IlamyCalendar>[0]["events"];
   focusDate: string | null;
   onShiftSeriesDays: (seriesId: string, deltaDays: number) => void;
 };
 
 export function CalendarPreview({ events, focusDate, onShiftSeriesDays }: CalendarPreviewProps) {
-  const calendarRef = useRef<FullCalendar | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const eventStartsRef = useRef<Map<string, Date>>(new Map());
 
   useEffect(() => {
-    if (!focusDate) {
-      return;
-    }
-    calendarRef.current?.getApi().gotoDate(focusDate);
-  }, [focusDate]);
+    setMounted(true);
+  }, []);
 
-  const memoEvents = useMemo(() => events, [events]);
+  useEffect(() => {
+    const starts = new Map<string, Date>();
+    for (const event of events ?? []) {
+      const start = event.start instanceof Date ? event.start : new Date(String(event.start));
+      starts.set(String(event.id), start);
+    }
+    eventStartsRef.current = starts;
+  }, [events]);
 
-  const handleDrop = (arg: EventDropArg) => {
-    const oldStart = arg.oldEvent.start;
-    const newStart = arg.event.start;
-    const seriesId = String(arg.event.extendedProps.seriesId ?? "");
-    if (!oldStart || !newStart || !seriesId) {
-      arg.revert();
+  const handleEventUpdate = (updatedEvent: CalendarEvent) => {
+    const oldStart = eventStartsRef.current.get(String(updatedEvent.id));
+    const seriesId = (updatedEvent.data as CalendarEventData | undefined)?.seriesId;
+    if (!oldStart || !seriesId) {
       return;
     }
-    const delta = dayDeltaFromDates(oldStart, newStart);
-    if (delta === 0) {
-      return;
+
+    const delta = dayDeltaFromDates(oldStart, updatedEvent.start.toDate());
+    if (delta !== 0) {
+      onShiftSeriesDays(seriesId, delta);
     }
-    onShiftSeriesDays(seriesId, delta);
   };
 
   return (
-    <Card className="h-full">
-      <CardHeader>
+    <Card className="flex h-[calc(100vh-3rem)] min-h-0 flex-col">
+      <CardHeader className="shrink-0">
         <CardTitle className="text-base">Calendar Preview</CardTitle>
       </CardHeader>
-      <CardContent>
-        <FullCalendar
-          ref={calendarRef}
-          plugins={[dayGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          editable
-          events={memoEvents}
-          eventDrop={handleDrop}
-          headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
-          eventDidMount={(info) => {
-            info.el.title = `${info.event.title} (${info.event.extendedProps.timeLabel})`;
-          }}
-          height="auto"
-        />
+      <CardContent className="min-h-0 flex-1">
+        <div className="h-full min-h-0">
+          {mounted ? (
+            <IlamyCalendar
+              key={focusDate ?? "default"}
+              events={events}
+              initialView="month"
+              initialDate={focusDate ?? undefined}
+              disableCellClick
+              disableEventClick
+              onEventUpdate={handleEventUpdate}
+              renderEvent={(event) => {
+                const eventData = event.data as CalendarEventData | undefined;
+                const timeLabel = eventData?.timeLabel;
+                const previewTitle = eventData ? formatCalendarPreviewLabel(eventData) : event.title;
+                return (
+                  <div
+                    className="truncate px-1 text-xs"
+                    title={timeLabel ? `${previewTitle} (${timeLabel})` : previewTitle}
+                  >
+                    {previewTitle}
+                  </div>
+                );
+              }}
+            />
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
