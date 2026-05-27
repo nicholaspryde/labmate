@@ -28,15 +28,6 @@ export function CalendarHeader() {
   return (
     <div className="flex w-full items-center justify-between gap-4 border-b border-[#e3e3e3] px-4 py-2">
       <div className="flex items-center gap-8">
-        <h2
-          className={cn(
-            "whitespace-nowrap text-[20px] font-semibold leading-normal text-[#161616]",
-          )}
-          style={{ letterSpacing: "-0.24px" }}
-        >
-          {monthLabel}{" "}
-          <span className="font-normal">{yearLabel}</span>
-        </h2>
         <div className="flex items-center gap-2">
           <Button
             type="button"
@@ -47,27 +38,38 @@ export function CalendarHeader() {
           >
             Today
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Previous"
-            onClick={prevPeriod}
-            className="h-10 w-10 rounded-sm text-[#161616] hover:bg-[#f5f5f5]"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Next"
-            onClick={nextPeriod}
-            className="h-10 w-10 rounded-sm text-[#161616] hover:bg-[#f5f5f5]"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Previous"
+              onClick={prevPeriod}
+              className="h-10 w-10 rounded-sm text-[#161616] hover:bg-[#f5f5f5]"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Next"
+              onClick={nextPeriod}
+              className="h-10 w-10 rounded-sm text-[#161616] hover:bg-[#f5f5f5]"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
+        <h2
+          className={cn(
+            "whitespace-nowrap text-[20px] font-semibold leading-normal text-[#161616]",
+          )}
+          style={{ letterSpacing: "-0.24px" }}
+        >
+          {monthLabel}{" "}
+          <span className="font-normal">{yearLabel}</span>
+        </h2>
       </div>
 
       <Select

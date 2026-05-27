@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useDeferredValue, useLayoutEffect, useMemo, useReducer, useState } from "react";
 import { CalendarPreview } from "@/components/calendar/CalendarPreview";
 import { TimepointEditor } from "@/components/editor/TimepointEditor";
 import { Button } from "@/components/ui/button";
@@ -23,11 +23,17 @@ export function TimepointCalendarApp() {
     state.series.find((series) => series.id === state.activeSeriesId) ??
     state.series[0] ??
     null;
-  const calendarEvents = useMemo(() => mapSeriesToCalendarEvents(state.series), [state.series]);
+  // Defer calendar event mapping so heavy calendar re-renders don't block keystroke commits.
+  const deferredSeries = useDeferredValue(state.series);
+  const calendarEvents = useMemo(() => mapSeriesToCalendarEvents(deferredSeries), [deferredSeries]);
 
   const createSeries = () => {
     dispatch({ type: "create-series", name: "" });
   };
+
+  const handleShiftSeriesDays = useCallback((seriesId: string, deltaDays: number) => {
+    dispatch({ type: "shift-series-days", seriesId, deltaDays });
+  }, []);
 
   return (
     <main className="min-h-screen bg-background p-4 md:p-6 lg:h-screen lg:overflow-hidden lg:pb-0">
@@ -41,7 +47,7 @@ export function TimepointCalendarApp() {
           </div>
         ) : (
           <div className="grid h-full gap-x-6 gap-y-0 lg:h-[calc(100vh-1.5rem)] lg:grid-cols-[460px_1fr] lg:grid-rows-1">
-            <div className="scrollbar-thin min-h-0 overflow-y-auto pr-3">
+            <div className="scrollbar-thin min-h-0 overflow-y-auto">
             <TimepointEditor
               series={activeSeries}
               mode={state.offsetMode}
@@ -152,9 +158,7 @@ export function TimepointCalendarApp() {
               focusDate={activeSeries?.anchorAt ?? null}
               highlightedTimepointId={highlightedTimepointId}
               onHoverTimepoint={setHighlightedTimepointId}
-              onShiftSeriesDays={(seriesId, deltaDays) =>
-                dispatch({ type: "shift-series-days", seriesId, deltaDays })
-              }
+              onShiftSeriesDays={handleShiftSeriesDays}
             />
             </div>
           </div>

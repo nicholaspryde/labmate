@@ -13,9 +13,11 @@ import {
 } from "@/lib/timepointMath";
 import { TimepointRow } from "@/components/editor/TimepointRow";
 import { OffsetModeToggle } from "@/components/editor/OffsetModeToggle";
-import { ExportDialog } from "@/components/export/ExportDialog";
+import { buildIcs, triggerIcsDownload } from "@/lib/icsExport";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const DEFAULT_EXPORT_DURATION_MINUTES = 30;
 type TimepointEditorProps = {
   series: Series | null;
   mode: OffsetMode;
@@ -156,11 +158,18 @@ export function TimepointEditor({
               aria-label="Timeseries name"
               className="h-auto min-w-0 flex-1 border-0 bg-background p-0 text-[20px] text-[#161616] shadow-none focus-visible:ring-0 placeholder:text-[#a8adb5]"
             />
-            <ExportDialog
-              series={[series]}
-              triggerLabel="Export to calendar"
-              triggerClassName="h-8 shrink-0 rounded-[12px] px-4 text-[14px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f5f6f8] hover:text-[#161616]"
-            />
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={series.timepoints.length === 0}
+              onClick={() => {
+                const ics = buildIcs([series], DEFAULT_EXPORT_DURATION_MINUTES);
+                triggerIcsDownload(ics);
+              }}
+              className="h-8 shrink-0 rounded-[12px] px-4 text-[14px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f5f6f8] hover:text-[#161616]"
+            >
+              Export to calendar
+            </Button>
           </div>
 
           <OffsetModeToggle value={mode} onChange={onModeChange} />

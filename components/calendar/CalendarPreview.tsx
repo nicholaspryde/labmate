@@ -5,7 +5,7 @@ import {
   useIlamyCalendarContext,
   type CalendarEvent,
 } from "@ilamy/calendar";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import "@/lib/dayjs";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { formatCalendarPreviewLabel, type CalendarEventData } from "@/lib/calendarMapping";
@@ -88,7 +88,7 @@ function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChi
   );
 }
 
-export function CalendarPreview({
+function CalendarPreviewImpl({
   events,
   focusDate,
   highlightedTimepointId,
@@ -168,3 +168,5 @@ export function CalendarPreview({
     </div>
   );
 }
+
+export const CalendarPreview = memo(CalendarPreviewImpl);

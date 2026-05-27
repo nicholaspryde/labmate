@@ -14,7 +14,7 @@ export type CalendarEventData = {
 };
 
 export function formatCalendarPreviewLabel(data: CalendarEventData): string {
-  return `${data.timepointNumber} - ${data.timepointName}`;
+  return data.timepointName;
 }
 
 const DEFAULT_EVENT_DURATION_MINUTES = 60;

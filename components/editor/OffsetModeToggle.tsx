@@ -10,8 +10,8 @@ type OffsetModeToggleProps = {
 };
 
 const OPTIONS: Array<{ value: OffsetMode; label: string }> = [
-  { value: "from-start", label: "Relative to +0" },
-  { value: "from-previous", label: "Relative to previous" },
+  { value: "from-start", label: "Relative to first event" },
+  { value: "from-previous", label: "Relative to previous event" },
   { value: "custom", label: "Custom" },
 ];
 

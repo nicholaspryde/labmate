@@ -1,8 +1,8 @@
 import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { addMinutes, format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronRight, Plus, TextAlignStart } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Calendar as CalendarIcon, ChevronRight, Plus } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, useAnimation, useReducedMotion } from "motion/react";
 import { fromTotalMinutes } from "@/lib/timepointMath";
 import { RELATIVE_TO_PREVIOUS, type OffsetMode } from "@/lib/types";
@@ -13,22 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-const PRETEXT_ICON_COLOR = "text-[#a8adb5]";
-
-function PretextIconContainer({ children }: { children?: ReactNode }) {
-  return (
-    <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center", PRETEXT_ICON_COLOR)}>
-      {children}
-    </span>
-  );
-}
-
 function formatRelativeReferenceReadout(
   relativeToMode: "default" | "previous" | "specific",
   referenceLabel: string,
 ): string {
   if (relativeToMode === "default") {
-    return "from +0";
+    return "from First event";
   }
   if (relativeToMode === "previous") {
     return "from previous event";
@@ -310,7 +300,7 @@ export function TimepointRow({
   const [timeInputError, setTimeInputError] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const startTimeInputRef = useRef<HTMLInputElement>(null);
-  const descriptionInputRef = useRef<HTMLInputElement>(null);
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
   const [relativeOffsetAnchorEl, setRelativeOffsetAnchorEl] = useState<HTMLDivElement | null>(null);
   const [startTimeAnchorEl, setStartTimeAnchorEl] = useState<HTMLDivElement | null>(null);
   const [endTimeAnchorEl, setEndTimeAnchorEl] = useState<HTMLDivElement | null>(null);
@@ -556,7 +546,7 @@ export function TimepointRow({
             type="button"
             aria-label="Delete timepoint"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="absolute right-4 top-5 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f5f6f8] hover:text-[#6b6b74] group-hover:opacity-100"
+            className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f5f6f8] hover:text-[#6b6b74] group-hover:opacity-100"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -566,7 +556,7 @@ export function TimepointRow({
       <div className="flex items-start gap-3">
         <div
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-[#f5f6f8] text-[12px] font-medium tabular-nums text-[#6b6b74]",
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#dfe8ff] text-[11px] font-medium tabular-nums text-[#4c69b3] mt-1",
             !isAnchor && "cursor-grab"
           )}
           {...(!isAnchor ? attributes : {})}
@@ -581,21 +571,18 @@ export function TimepointRow({
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
             placeholder="Add event name"
-            className="h-8 min-w-0 w-full border-0 bg-transparent px-0 py-0 text-base text-[#161616] shadow-none focus-visible:ring-0 placeholder:text-[#a8adb5]"
+            className="h-8 min-w-0 w-full border-0 bg-transparent px-0 py-0 text-[16px] font-medium text-[#161616] shadow-none focus-visible:ring-0 placeholder:text-[#a8adb5]"
             onFocus={onFocus}
             aria-label="Add event name"
           />
 
-          <div className="flex flex-col gap-0 pr-3 pb-2 pt-0">
+          <div className="flex flex-col gap-0 pr-3 pb-0 pt-1">
+            {!isAnchor && (
             <div className="flex items-start">
-              <PretextIconContainer>
-                <Plus className="h-3.5 w-3.5" aria-hidden />
-              </PretextIconContainer>
+              <Plus className="h-8 w-8 shrink-0 p-[9px] text-[#a8adb5]" aria-hidden />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center text-[14px] font-normal text-[#161616]">
-              {isAnchor ? (
-                <span className="inline-flex h-8 items-center">0</span>
-              ) : isCustomMode ? (
+              {isCustomMode ? (
                 <div className="relative inline-flex h-8 shrink-0 items-center">
                   <div ref={setRelativeOffsetAnchorEl} className="relative shrink-0">
                     <Input
@@ -699,7 +686,7 @@ export function TimepointRow({
                         closeRelativeToPicker();
                       }}
                     >
-                      +0
+                      First event
                     </button>
                     <button
                       type="button"
@@ -827,17 +814,16 @@ export function TimepointRow({
                 </div>
               )}
                 </div>
-                {isActive && !isAnchor && relativeOffsetError && (
+                {isActive && relativeOffsetError && (
                   <p className="text-xs text-red-600">{relativeOffsetError}</p>
                 )}
               </div>
             </div>
-            <div className="flex items-start">
-              <PretextIconContainer>
-                <CalendarIcon className="h-3.5 w-3.5" aria-hidden />
-              </PretextIconContainer>
+            )}
+            <div className={cn("flex items-start", !isAnchor && "-mt-1")}>
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0 mr-[9px] mt-[9px] text-[#a8adb5]" aria-hidden />
               <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1 text-sm font-normal" onClick={(event) => event.stopPropagation()}>
+            <div className="flex flex-wrap items-center gap-0 text-sm font-normal" onClick={(event) => event.stopPropagation()}>
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -1052,11 +1038,8 @@ export function TimepointRow({
                 )}
               </div>
             </div>
-            <div className="flex items-center">
-              <PretextIconContainer>
-                <TextAlignStart className="h-3.5 w-3.5" aria-hidden />
-              </PretextIconContainer>
-              <div className="min-w-0 flex-1 flex items-center">
+            <div className="flex items-start mt-1">
+              <div className="min-w-0 flex-1 flex items-start">
               {!showDescriptionInput ? (
                 <button
                   type="button"
@@ -1069,14 +1052,15 @@ export function TimepointRow({
                     });
                   }}
                 >
-                  Description
+                  Add description
                 </button>
               ) : (
-                <Input
+                <textarea
                   ref={descriptionInputRef}
                   value={description}
-                  placeholder="Description"
-                  className="h-8 min-w-0 flex-1 border-0 px-0 pr-2 text-sm font-normal text-[#161616] shadow-none placeholder:text-[#a8adb5] hover:bg-[#f5f6f8] focus-visible:ring-0"
+                  placeholder="Add description"
+                  rows={1}
+                  className="block min-h-8 min-w-0 flex-1 resize-none border-0 bg-transparent px-0 pr-2 py-[6px] text-sm font-normal leading-5 text-[#161616] shadow-none outline-none placeholder:text-[#a8adb5] focus-visible:ring-0 [field-sizing:content]"
                   onClick={(event) => event.stopPropagation()}
                   onChange={(event) => onDescriptionChange(event.target.value)}
                   onBlur={() => {
