@@ -179,7 +179,8 @@ export function seriesReducer(state: AppState, action: SeriesAction): AppState {
       }));
     case "add-timepoint":
       return updateSeries(state, action.seriesId, (series) => {
-        const lastOffset = series.timepoints[series.timepoints.length - 1]?.offsetFromStartMinutes ?? 0;
+        const previous = series.timepoints[series.timepoints.length - 1];
+        const lastOffset = previous?.offsetFromStartMinutes ?? 0;
         return {
           ...series,
           timepoints: [
@@ -189,8 +190,8 @@ export function seriesReducer(state: AppState, action: SeriesAction): AppState {
               name: "",
               description: "",
               offsetFromStartMinutes: lastOffset + MINUTES_IN_DAY,
-              hasScheduledTime: false,
-              durationMinutes: 60,
+              hasScheduledTime: previous?.hasScheduledTime ?? false,
+              durationMinutes: previous?.durationMinutes ?? 60,
             },
           ],
         };

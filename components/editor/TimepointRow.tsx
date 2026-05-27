@@ -217,6 +217,7 @@ type TimepointRowProps = {
   durationMinutes: number;
   isAnchor: boolean;
   isActive: boolean;
+  isHighlighted?: boolean;
   resolvedAt: Date;
   mode: OffsetMode;
   displayOffsetMinutes: number;
@@ -249,6 +250,7 @@ export function TimepointRow({
   durationMinutes,
   isAnchor,
   isActive,
+  isHighlighted = false,
   resolvedAt,
   mode,
   displayOffsetMinutes,
@@ -541,7 +543,10 @@ export function TimepointRow({
       onClick={onFocus}
     >
       <motion.div
-        className="group relative rounded-[12px] border border-[#e3e3e3] bg-white p-3"
+        className={cn(
+          "group relative rounded-[12px] border bg-white p-3 transition-colors duration-150",
+          isHighlighted ? "border-[#004cff]/50" : "border-[#e3e3e3]",
+        )}
         style={{ boxShadow: cardShadow }}
         animate={enterControls}
         initial={{ opacity: 1, y: 0, filter: "blur(0px)" }}

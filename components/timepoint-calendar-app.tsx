@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useReducer } from "react";
+import { useLayoutEffect, useMemo, useReducer, useState } from "react";
 import { CalendarPreview } from "@/components/calendar/CalendarPreview";
 import { TimepointEditor } from "@/components/editor/TimepointEditor";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { BOOTSTRAP_SERIES_ID, initialState, nowAnchorIso, seriesReducer } from "
 
 export function TimepointCalendarApp() {
   const [state, dispatch] = useReducer(seriesReducer, initialState);
+  const [highlightedTimepointId, setHighlightedTimepointId] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     dispatch({
@@ -44,6 +45,7 @@ export function TimepointCalendarApp() {
             <TimepointEditor
               series={activeSeries}
               mode={state.offsetMode}
+              highlightedTimepointId={highlightedTimepointId}
               onModeChange={(mode) => dispatch({ type: "set-offset-mode", mode })}
               onSeriesNameChange={(name) =>
                 activeSeries && dispatch({ type: "set-series-name", seriesId: activeSeries.id, name })
@@ -148,6 +150,8 @@ export function TimepointCalendarApp() {
             <CalendarPreview
               events={calendarEvents}
               focusDate={activeSeries?.anchorAt ?? null}
+              highlightedTimepointId={highlightedTimepointId}
+              onHoverTimepoint={setHighlightedTimepointId}
               onShiftSeriesDays={(seriesId, deltaDays) =>
                 dispatch({ type: "shift-series-days", seriesId, deltaDays })
               }

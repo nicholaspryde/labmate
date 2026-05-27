@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 type TimepointEditorProps = {
   series: Series | null;
   mode: OffsetMode;
+  highlightedTimepointId?: string | null;
   onModeChange: (mode: OffsetMode) => void;
   onSeriesNameChange: (name: string) => void;
   onAnchorDateTimeChange: (anchorAt: string) => void;
@@ -38,6 +39,7 @@ type TimepointEditorProps = {
 export function TimepointEditor({
   series,
   mode,
+  highlightedTimepointId = null,
   onModeChange,
   onSeriesNameChange,
   onAnchorDateTimeChange,
@@ -199,6 +201,7 @@ export function TimepointEditor({
                   hasScheduledTime={timepoint.hasScheduledTime === true}
                   isAnchor={index === 0}
                   isActive={activeTimepointId === timepoint.id}
+                  isHighlighted={highlightedTimepointId === timepoint.id}
                   resolvedAt={resolved[index].resolvedAt}
                   mode={mode}
                   displayOffsetMinutes={computeDisplayOffsetMinutes(series, index, mode)}

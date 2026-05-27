@@ -92,3 +92,291 @@
     background-color: rgba(22, 22, 22, 0.28);
   }
 }
+
+@layer components {
+  /* Event chip styled to the Figma spec. Per-event accent supplied via --event-accent.
+     The `!important` on border-left wins against the grid-line border-color override
+     defined below (which targets descendants of `calendar-body`). */
+  .calendar-event-chip {
+    --event-accent: #6c96ff;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    height: 100%;
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 2px;
+    border-left: 4px solid var(--event-accent) !important;
+    background-color: color-mix(in srgb, var(--event-accent) 22%, white);
+    color: color-mix(in srgb, var(--event-accent) 70%, #000 30%);
+    overflow: hidden;
+    transition: box-shadow 120ms ease-out, transform 120ms ease-out,
+      background-color 120ms ease-out;
+  }
+
+  /* Compact variant for month / year views: single-line row that fits inside a
+     ~22px tall slot — accent | time | title. */
+  .calendar-event-chip--compact {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    border-radius: 3px;
+    border-left-width: 3px !important;
+  }
+
+  .calendar-event-chip--compact .calendar-event-chip__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .calendar-event-chip--compact .calendar-event-chip__time {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: color-mix(in srgb, var(--event-accent) 80%, #000 20%);
+    opacity: 0.85;
+  }
+
+  /* Highlighted state: triggered when the user hovers the matching timepoint
+     row in the editor (or a sibling chip). */
+  .calendar-event-chip--highlighted {
+    background-color: color-mix(in srgb, var(--event-accent) 32%, white);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--event-accent) 60%, transparent),
+      0 2px 6px rgba(16, 24, 40, 0.1);
+  }
+
+  /* Per-event positioning wrapper rendered by ilamy as a bare
+     `<div class="absolute">` directly around our `.calendar-event-chip`.
+     We lift the shadow up to this wrapper so the entire event reads as one
+     elevated card. The chip itself keeps `overflow: hidden` so its rounded
+     left-border accent stays clipped; the shadow sits outside that clip. */
+  [data-testid="ilamy-calendar"] .absolute:has(> .calendar-event-chip) {
+    border-radius: 2px;
+    box-shadow:
+      0 1px 2px rgba(16, 24, 40, 0.06),
+      0 2px 6px rgba(16, 24, 40, 0.08);
+  }
+
+  /* The per-column events overlay ilamy renders has `overflow-clip`, which
+     would otherwise eat the shadow above. Allow it to render past the column
+     edge — events are positioned by percentage inside the column, so a few
+     pixels of shadow bleed look right (matches Google Calendar). */
+  [data-testid="ilamy-calendar"] .pointer-events-none.z-10.overflow-clip {
+    overflow: visible !important;
+  }
+
+  /* Month view event wrapper. Each event is positioned absolutely inside a
+     `[data-testid^="horizontal-event-"]` wrapper (24px height by default).
+     Drop the heavy default `shadow` from the inner ilamy `<motion.div>` and
+     give the row a thin radius so our chip's rounded edge isn't clipped by
+     a square wrapper. The tight visual elevation in month view comes from
+     the chip's pastel fill against white grid cells, not a drop shadow. */
+  [data-testid="ilamy-calendar"] [data-testid^="horizontal-event-"] {
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  [data-testid="ilamy-calendar"] [data-testid^="horizontal-event-"] > .shadow {
+    box-shadow: none !important;
+    border-radius: inherit;
+    overflow: hidden;
+  }
+
+  .calendar-event-chip__title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .calendar-event-chip__time {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: lowercase;
+  }
+
+  /* Soften ilamy calendar's default grid and typography to match the Figma surface.
+     The package uses `bg-background` on its day-header strip and time gutter; locally
+     override the token to pure white so those areas don't pick up the page's slightly
+     tinted `--background` and read as gray next to the white card. */
+  [data-testid="ilamy-calendar"] {
+    --ilamy-grid-line: #f4f4f4;
+    --color-background: #ffffff;
+    --background: #ffffff;
+    background-color: #ffffff;
+    color: #1d232f;
+  }
+
+  [data-testid="ilamy-calendar"] [data-testid="calendar-body"] {
+    background-color: #ffffff;
+    border-color: #ffffff;
+  }
+
+  /* Override the package's default border-* utility colors throughout the calendar tree.
+     Note: `calendar-body` itself is intentionally excluded here so its outer 1px frame
+     stays white; only inner grid lines pick up the gray. */
+  [data-testid="ilamy-calendar"] [data-testid="calendar-body"] *,
+  [data-testid="ilamy-calendar"] [data-testid="vertical-grid-container"] *,
+  [data-testid="ilamy-calendar"] [data-testid="horizontal-grid-container"] *,
+  [data-testid="ilamy-calendar"] [data-testid="week-view-header"] *,
+  [data-testid="ilamy-calendar"] [data-testid="day-view-header"] *,
+  [data-testid="ilamy-calendar"] [data-testid="month-header"] * {
+    border-color: var(--ilamy-grid-line);
+  }
+
+  /* Hide the "Week N" label in the week-view header gutter, but keep the gutter
+     column itself laid out so its width matches the body's time-gutter column and
+     the day-header cells stay aligned with the columns below. */
+  [data-testid="ilamy-calendar"] [data-testid="week-view-header"] > div:first-child > * {
+    visibility: hidden;
+  }
+
+  /* Hide the "All day" lane and its events row — not present in the Figma. */
+  [data-testid="ilamy-calendar"] [data-testid="vertical-grid-all-day"],
+  [data-testid="ilamy-calendar"] [data-testid="all-day-row"],
+  [data-testid="ilamy-calendar"] [data-testid^="horizontal-row-allday"],
+  [data-testid="ilamy-calendar"] [data-testid^="horizontal-events-allday"] {
+    display: none !important;
+  }
+
+  /* Weekday header typography to match Figma (Sun 2, Mon, etc.). */
+  [data-testid="ilamy-calendar"] [data-testid="week-view-header"] [data-testid^="week-header-weekday-"],
+  [data-testid="ilamy-calendar"] [data-testid="day-view-header"] {
+    color: #1d232f;
+  }
+
+  [data-testid="ilamy-calendar"] [data-testid="week-view-header"] [data-testid^="week-header-weekday-"] {
+    background-color: transparent !important;
+    font-weight: 500 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px;
+  }
+
+  [data-testid="ilamy-calendar"] [data-testid="week-view-header"] [data-testid^="week-header-weekday-"] > div:first-child {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    color: #1d232f;
+  }
+
+  /* Day-number circle/pill: in Figma, the current day shows as a small blue pill behind the date. */
+  [data-testid="ilamy-calendar"] [data-testid="week-view-header"] [data-testid^="week-header-weekday-"] > div:nth-child(2) {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 2px 4px !important;
+    border-radius: 4px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    background-color: transparent !important;
+    color: #1d232f !important;
+    line-height: 1;
+  }
+
+  /* Today highlight: only the day with the bg-primary inner pill keeps a colored pill. */
+  [data-testid="ilamy-calendar"] [data-testid="week-view-header"] [data-testid^="week-header-weekday-"] > div.bg-primary,
+  [data-testid="ilamy-calendar"] [data-testid="week-view-header"] [data-testid^="week-header-weekday-"] > div[class*="bg-primary"]:nth-child(2) {
+    background-color: #004cff !important;
+    color: #ffffff !important;
+  }
+
+  /* Hour gutter / time labels: 12px Inter medium, lowercase to match Figma ("7 am"). */
+  [data-testid="ilamy-calendar"] [data-hour] > div {
+    color: #1d232f !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    text-transform: lowercase;
+  }
+
+  /* Hour-row height. The ilamy package hard-codes `min-h-[60px]` on both the
+     gutter hour cells and each day-column cell. We override both so they stay
+     in vertical sync. `!important` is required because Tailwind utilities
+     (`min-h-[60px]`) live in a later cascade layer than `@layer components`
+     and would otherwise win regardless of selector specificity. */
+  [data-testid="ilamy-calendar"] [data-hour],
+  [data-testid="ilamy-calendar"] [data-testid^="vertical-cell-"] {
+    min-height: 96px !important;
+  }
+
+  /* Suppress the gray `hover:bg-accent` ilamy applies to day/grid cells.
+     The Tailwind utility lives in a later cascade layer, so `!important` is
+     required to win. We keep the hover affordance on the "+N more" link
+     (handled below) and on header buttons. */
+  [data-testid="ilamy-calendar"] [data-testid^="day-cell-"]:hover,
+  [data-testid="ilamy-calendar"] [data-testid^="vertical-cell-"]:hover,
+  [data-testid="ilamy-calendar"] [data-testid="grid-cell-content"]:hover {
+    background-color: transparent !important;
+  }
+
+  /* Month view weekday strip — match the visual language of the week header
+     (uppercase-light "Sun Mon Tue …" tone). */
+  [data-testid="ilamy-calendar"] [data-testid="month-header"] [data-testid^="month-header-weekday-"] {
+    color: #6b6b74;
+    font-weight: 500;
+    background-color: transparent !important;
+    padding: 8px 0 !important;
+  }
+
+  [data-testid="ilamy-calendar"] [data-testid="month-header"] [data-testid^="month-header-weekday-"] > span {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* Day number circle inside each month cell. Default ilamy is 20×20 with
+     `bg-primary` for today (which is near-black in our token set). Use the
+     project's accent blue instead so the highlight matches the week-view. */
+  [data-testid="ilamy-calendar"] [data-testid^="day-number-"] {
+    color: #1d232f;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    margin: 4px 4px 2px auto !important;
+  }
+
+  [data-testid="ilamy-calendar"] [data-testid="day-number-today"] {
+    background-color: #004cff !important;
+    color: #ffffff !important;
+  }
+
+  /* Outside-month day cells: dim the day number to match the cell's muted
+     text color set via `classesOverride.disabledCell` on <IlamyCalendar>.
+     The base `[data-testid^="day-number-"]` rule above forces #1d232f on
+     every day number, so we explicitly soften the number inside disabled
+     (i.e. outside-the-displayed-month) cells. */
+  [data-testid="ilamy-calendar"] [data-disabled="true"] [data-testid^="day-number-"] {
+    color: #c5c8cd;
+  }
+
+  /* "+N more" affordance — soft, low-emphasis, sits below the rendered chips. */
+  [data-testid="ilamy-calendar"] [data-testid="grid-cell-content"] > .text-muted-foreground {
+    font-size: 11px !important;
+    font-weight: 500;
+    color: #6b6b74 !important;
+    padding: 0 8px;
+    margin-top: 2px !important;
+  }
+
+  [data-testid="ilamy-calendar"] [data-testid="grid-cell-content"] > .text-muted-foreground:hover {
+    color: #161616 !important;
+  }
+}

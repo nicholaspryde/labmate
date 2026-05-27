@@ -1,19 +1,100 @@
 "use client";
 
-import { IlamyCalendar, type CalendarEvent } from "@ilamy/calendar";
-import { useEffect, useRef, useState } from "react";
+import {
+  IlamyCalendar,
+  useIlamyCalendarContext,
+  type CalendarEvent,
+} from "@ilamy/calendar";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import "@/lib/dayjs";
+import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { formatCalendarPreviewLabel, type CalendarEventData } from "@/lib/calendarMapping";
 import { dayDeltaFromDates } from "@/lib/timepointMath";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type CalendarPreviewProps = {
   events: Parameters<typeof IlamyCalendar>[0]["events"];
   focusDate: string | null;
+  highlightedTimepointId: string | null;
+  onHoverTimepoint: (timepointId: string | null) => void;
   onShiftSeriesDays: (seriesId: string, deltaDays: number) => void;
 };
 
-export function CalendarPreview({ events, focusDate, onShiftSeriesDays }: CalendarPreviewProps) {
+const DEFAULT_ACCENT = "#6c96ff";
+
+type EventChipProps = {
+  event: CalendarEvent;
+  highlightedTimepointId: string | null;
+  onHoverTimepoint: (timepointId: string | null) => void;
+};
+
+function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChipProps) {
+  const { view } = useIlamyCalendarContext();
+  const eventData = event.data as CalendarEventData | undefined;
+  const accent = event.color || event.backgroundColor || DEFAULT_ACCENT;
+  const chipStyle: CSSProperties & Record<"--event-accent", string> = {
+    "--event-accent": accent,
+  };
+  const timepointId = eventData?.timepointId;
+  const timeLabel = eventData?.timeLabel;
+  const previewTitle = eventData ? formatCalendarPreviewLabel(eventData) : event.title;
+  const titleOnly = eventData?.timepointName?.trim() || previewTitle;
+  const isHighlighted =
+    Boolean(timepointId) && timepointId === highlightedTimepointId;
+  const isCompact = view === "month" || view === "year";
+
+  const handleMouseEnter = () => {
+    if (timepointId) onHoverTimepoint(timepointId);
+  };
+  const handleMouseLeave = () => onHoverTimepoint(null);
+  const tooltip = timeLabel ? `${previewTitle} (${timeLabel})` : previewTitle;
+
+  if (isCompact) {
+    return (
+      <div
+        className={cn(
+          "calendar-event-chip calendar-event-chip--compact",
+          isHighlighted && "calendar-event-chip--highlighted",
+        )}
+        style={chipStyle}
+        title={tooltip}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {timeLabel ? (
+          <span className="calendar-event-chip__time">{timeLabel}</span>
+        ) : null}
+        <span className="calendar-event-chip__title">{titleOnly}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "calendar-event-chip",
+        isHighlighted && "calendar-event-chip--highlighted",
+      )}
+      style={chipStyle}
+      title={tooltip}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className="calendar-event-chip__title">{previewTitle}</div>
+      {timeLabel ? (
+        <div className="calendar-event-chip__time">{timeLabel}</div>
+      ) : null}
+    </div>
+  );
+}
+
+export function CalendarPreview({
+  events,
+  focusDate,
+  highlightedTimepointId,
+  onHoverTimepoint,
+  onShiftSeriesDays,
+}: CalendarPreviewProps) {
   const [mounted, setMounted] = useState(false);
   const eventStartsRef = useRef<Map<string, Date>>(new Map());
 
@@ -43,39 +124,47 @@ export function CalendarPreview({ events, focusDate, onShiftSeriesDays }: Calend
     }
   };
 
+  const headerComponent = useMemo(() => <CalendarHeader />, []);
+
   return (
-    <Card className="flex h-[calc(100vh-3rem)] min-h-0 flex-col">
-      <CardHeader className="shrink-0">
-        <CardTitle className="text-base">Calendar Preview</CardTitle>
-      </CardHeader>
-      <CardContent className="min-h-0 flex-1">
-        <div className="h-full min-h-0">
-          {mounted ? (
-            <IlamyCalendar
-              key={focusDate ?? "default"}
-              events={events}
-              initialView="month"
-              initialDate={focusDate ?? undefined}
-              disableCellClick
-              disableEventClick
-              onEventUpdate={handleEventUpdate}
-              renderEvent={(event) => {
-                const eventData = event.data as CalendarEventData | undefined;
-                const timeLabel = eventData?.timeLabel;
-                const previewTitle = eventData ? formatCalendarPreviewLabel(eventData) : event.title;
-                return (
-                  <div
-                    className="truncate px-1 text-xs"
-                    title={timeLabel ? `${previewTitle} (${timeLabel})` : previewTitle}
-                  >
-                    {previewTitle}
-                  </div>
-                );
-              }}
-            />
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
+    <div
+      className={cn(
+        "flex h-[calc(100vh-3rem)] min-h-0 flex-col overflow-hidden rounded-[12px] border border-[#e3e3e3] bg-white",
+      )}
+      style={{
+        boxShadow:
+          "0px 3px 6px -2px lch(0% 0 0 / 0.02), 0px 1px 1px lch(0% 0 0 / 0.04)",
+      }}
+    >
+      <div className="min-h-0 flex-1">
+        {mounted ? (
+          <IlamyCalendar
+            key={focusDate ?? "default"}
+            events={events}
+            initialView="month"
+            initialDate={focusDate ?? undefined}
+            disableCellClick
+            disableEventClick
+            disableDragAndDrop
+            dayMaxEvents={4}
+            eventHeight={22}
+            eventSpacing={2}
+            classesOverride={{
+              disabledCell: "bg-[#fafbfc] text-[#c5c8cd] pointer-events-none",
+            }}
+            onEventUpdate={handleEventUpdate}
+            headerComponent={headerComponent}
+            headerClassName="px-8 py-4 border-b border-[#f4f4f4]"
+            renderEvent={(event) => (
+              <EventChip
+                event={event}
+                highlightedTimepointId={highlightedTimepointId}
+                onHoverTimepoint={onHoverTimepoint}
+              />
+            )}
+          />
+        ) : null}
+      </div>
+    </div>
   );
 }
