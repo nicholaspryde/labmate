@@ -20,7 +20,7 @@ export function OffsetModeToggle({ value, onChange }: OffsetModeToggleProps) {
     <Select value={value} onValueChange={(next) => onChange(next as OffsetMode)}>
       <SelectPrimitive.Trigger
         className={cn(
-          "inline-flex h-6 w-fit items-center gap-1 rounded-[3px] bg-[#f5f6f8] px-2 text-[11px] font-normal text-[#6b6b74] outline-none hover:bg-[#eceef1] focus-visible:ring-1 focus-visible:ring-[#c6c8cf]",
+          "inline-flex h-6 w-fit items-center gap-1 rounded-[3px] bg-[#f0f0eb] px-2 text-[11px] font-normal text-[#6b6b74] outline-none hover:bg-[#ebebe5] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#c6c8cf]",
         )}
         aria-label="Offset mode"
       >

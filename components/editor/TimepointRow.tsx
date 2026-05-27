@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { addMinutes, format } from "date-fns";
 import { Calendar as CalendarIcon, ChevronRight, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { motion, useAnimation, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { fromTotalMinutes } from "@/lib/timepointMath";
 import { RELATIVE_TO_PREVIOUS, type OffsetMode } from "@/lib/types";
 import { AnchoredList } from "@/components/ui/anchored-list";
@@ -18,7 +18,7 @@ function formatRelativeReferenceReadout(
   referenceLabel: string,
 ): string {
   if (relativeToMode === "default") {
-    return "from First event";
+    return "from first event";
   }
   if (relativeToMode === "previous") {
     return "from previous event";
@@ -117,6 +117,51 @@ function buildSingleTimeOptions(resolvedAt: Date, selectedTimeValue?: string) {
   return options;
 }
 
+type TimeOption = { value: string; label: string };
+
+// Filters time options based on a partial user input like "8", "8a", "8:3", "8:30p", or "13".
+// Returns all options if the input can't be parsed or no options match, so the user can
+// still browse the list instead of seeing an empty dropdown.
+function filterTimeOptions(options: TimeOption[], rawInput: string): TimeOption[] {
+  const trimmed = rawInput.trim().toLowerCase().replace(/\.+$/, "");
+  if (!trimmed) return options;
+
+  const match = trimmed.match(/^(\d{1,2})(?::(\d{0,2}))?\s*(a|am|p|pm)?$/);
+  if (!match) return options;
+
+  const inputHourRaw = Number.parseInt(match[1], 10);
+  const inputMinuteStr = match[2] ?? "";
+  const inputMeridiem = match[3] ?? "";
+
+  if (Number.isNaN(inputHourRaw) || inputHourRaw > 23) return options;
+
+  let targetHour12 = inputHourRaw;
+  let targetMeridiem = inputMeridiem;
+
+  if (inputHourRaw === 0) {
+    targetHour12 = 12;
+    targetMeridiem = targetMeridiem || "am";
+  } else if (inputHourRaw >= 13) {
+    targetHour12 = inputHourRaw - 12;
+    targetMeridiem = "pm";
+  }
+
+  const filtered = options.filter((option) => {
+    const labelMatch = option.label.match(/^(\d{1,2}):(\d{2})(am|pm)$/);
+    if (!labelMatch) return false;
+    const optHour = Number.parseInt(labelMatch[1], 10);
+    const optMinute = labelMatch[2];
+    const optMeridiem = labelMatch[3];
+
+    if (optHour !== targetHour12) return false;
+    if (inputMinuteStr && !optMinute.startsWith(inputMinuteStr)) return false;
+    if (targetMeridiem && !optMeridiem.startsWith(targetMeridiem)) return false;
+    return true;
+  });
+
+  return filtered.length > 0 ? filtered : options;
+}
+
 function formatTimeLabel(resolvedAt: Date, hour: number, minute: number): string {
   const time = new Date(resolvedAt);
   time.setHours(hour, minute, 0, 0);
@@ -126,7 +171,7 @@ function formatTimeLabel(resolvedAt: Date, hour: number, minute: number): string
 function timeOptionButtonClassName(isSelected: boolean) {
   return cn(
     "flex w-full cursor-default items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent",
-    isSelected && "bg-[#f5f6f8] font-medium text-[#161616] hover:bg-[#eceef1]",
+    isSelected && "bg-[#f0f0eb] font-medium text-[#161616] hover:bg-[#ebebe5]",
   );
 }
 
@@ -264,7 +309,6 @@ export function TimepointRow({
   animateEnter = false,
 }: TimepointRowProps) {
   const shouldReduceMotion = useReducedMotion();
-  const enterControls = useAnimation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     disabled: isAnchor,
@@ -275,22 +319,6 @@ export function TimepointRow({
   };
   const cardShadow =
     "0px 3px 6px -2px lch(0% 0 0 / 0.02), 0px 1px 1px lch(0% 0 0 / 0.04)";
-
-  useLayoutEffect(() => {
-    if (!animateEnter || shouldReduceMotion) return;
-
-    void enterControls.set({ opacity: 0, y: 6, filter: "blur(3px)" });
-    void enterControls.start(
-      { opacity: 1, y: 0, filter: "blur(0px)" },
-      shouldReduceMotion
-        ? { duration: 0 }
-        : {
-            y: { type: "spring", visualDuration: 0.42, bounce: 0 },
-            opacity: { type: "spring", visualDuration: 0.38, bounce: 0 },
-            filter: { duration: 0.24, ease: [0.33, 1, 0.68, 1] },
-          },
-    );
-  }, [animateEnter, enterControls, shouldReduceMotion]);
   const [showDescriptionInput, setShowDescriptionInput] = useState(Boolean(description.trim()));
   const [timeEntryActive, setTimeEntryActive] = useState(hasScheduledTime);
   const [startTimeInput, setStartTimeInput] = useState("");
@@ -413,11 +441,25 @@ export function TimepointRow({
     hasScheduledTime ? selectedStartTimeValue : undefined,
   );
   const endTimeOptions = buildSingleTimeOptions(resolvedAt, hasScheduledTime ? selectedEndTimeValue : undefined);
-  const startTimeInputWidthCh = Math.max(startTimeInput.length + 2, 7);
-  const endTimeInputWidthCh = Math.max(endTimeInput.length + 2, 7);
+  const currentStartLabel = hasScheduledTime
+    ? formatTimeLabel(resolvedAt, resolvedAt.getHours(), resolvedAt.getMinutes())
+    : "";
+  const currentEndLabel = hasScheduledTime
+    ? formatTimeLabel(resolvedEndAt, resolvedEndAt.getHours(), resolvedEndAt.getMinutes())
+    : "";
+  const filteredStartTimeOptions =
+    startTimeInput.trim() !== "" && startTimeInput !== currentStartLabel
+      ? filterTimeOptions(startTimeOptions, startTimeInput)
+      : startTimeOptions;
+  const filteredEndTimeOptions =
+    endTimeInput.trim() !== "" && endTimeInput !== currentEndLabel
+      ? filterTimeOptions(endTimeOptions, endTimeInput)
+      : endTimeOptions;
+  const startTimeInputWidthCh = Math.max(startTimeInput.length + 1, 6);
+  const endTimeInputWidthCh = Math.max(endTimeInput.length + 1, 6);
   const timeFieldClassName = cn(
-    "h-8 w-auto min-w-[4.5rem] rounded-[4px] border-0 bg-white px-2 py-0 text-left text-[14px] font-normal shadow-none hover:bg-[#f5f6f8] focus:bg-[#f5f6f8] focus-visible:ring-0",
-    isActive ? "text-[#161616]" : "text-[#6b6b74]",
+    "h-8 w-auto min-w-[3rem] rounded-[4px] border-0 bg-white px-1 py-0 text-left text-[14px] font-normal shadow-none hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0",
+    "text-[#161616]",
   );
   const defaultStartScrollValue = closestTimeSlotValue();
   const defaultEndScrollValue = closestTimeSlotValue(addMinutes(new Date(), 60));
@@ -531,6 +573,7 @@ export function TimepointRow({
       style={dragStyle}
       className={cn(isDragging && "opacity-50")}
       onClick={onFocus}
+      data-timepoint-row
     >
       <motion.div
         className={cn(
@@ -538,22 +581,31 @@ export function TimepointRow({
           isHighlighted ? "border-[#004cff]/50" : "border-[#e3e3e3]",
         )}
         style={{ boxShadow: cardShadow }}
-        animate={enterControls}
-        initial={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        initial={
+          animateEnter && !shouldReduceMotion
+            ? { opacity: 0, y: 6, filter: "blur(3px)" }
+            : false
+        }
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{
+          y: { type: "spring", visualDuration: 0.42, bounce: 0 },
+          opacity: { type: "spring", visualDuration: 0.38, bounce: 0 },
+          filter: { duration: 0.24, ease: [0.33, 1, 0.68, 1] },
+        }}
       >
         {onDelete && (
           <button
             type="button"
             aria-label="Delete timepoint"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f5f6f8] hover:text-[#6b6b74] group-hover:opacity-100"
+            className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:opacity-100"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </button>
         )}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-4">
         <div
           className={cn(
             "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#dfe8ff] text-[11px] font-medium tabular-nums text-[#4c69b3] mt-1",
@@ -579,7 +631,7 @@ export function TimepointRow({
           <div className="flex flex-col gap-0 pr-3 pb-0 pt-1">
             {!isAnchor && (
             <div className="flex items-start">
-              <Plus className="h-8 w-8 shrink-0 p-[9px] text-[#a8adb5]" aria-hidden />
+              <Plus className="h-3.5 w-3.5 shrink-0 mr-[9px] mt-[9px] text-[#a8adb5]" aria-hidden />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center text-[14px] font-normal text-[#161616]">
               {isCustomMode ? (
@@ -620,8 +672,8 @@ export function TimepointRow({
                         }
                       }}
                       className={cn(
-                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-1 py-0 text-left text-[14px] font-normal shadow-none [field-sizing:content] hover:bg-[#f5f6f8] focus:bg-[#f5f6f8] focus-visible:ring-0 rounded-[4px]",
-                        relativeSuggestionsOpen && "bg-[#f5f6f8]",
+                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-1 py-0 text-left text-[14px] font-normal shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
+                        relativeSuggestionsOpen && "bg-[#f4f4f0]",
                       )}
                       aria-label="Relative offset"
                     />
@@ -651,8 +703,8 @@ export function TimepointRow({
                     ref={setRelativeToPickerAnchorEl}
                     type="button"
                     className={cn(
-                      "inline-flex h-8 min-w-0 max-w-[16rem] items-center rounded-[4px] px-1 text-[14px] font-normal whitespace-nowrap text-[#161616] hover:bg-[#f5f6f8]",
-                      relativeToPickerOpen && "bg-[#f5f6f8]",
+                      "inline-flex h-8 min-w-0 max-w-[16rem] items-center rounded-[4px] px-1 text-[14px] font-normal whitespace-nowrap text-[#161616] hover:bg-[#f0f0eb]",
+                      relativeToPickerOpen && "bg-[#f0f0eb]",
                     )}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -706,7 +758,7 @@ export function TimepointRow({
                         className={cn(
                           timeOptionButtonClassName(relativeToMode === "specific"),
                           "flex items-center justify-between",
-                          relativeToMenuLevel === "specific" && "bg-[#f5f6f8]",
+                          relativeToMenuLevel === "specific" && "bg-[#f0f0eb]",
                         )}
                         onMouseDown={(event) => {
                           event.preventDefault();
@@ -785,8 +837,8 @@ export function TimepointRow({
                         setRelativeSuggestionsOpen(true);
                       }}
                       className={cn(
-                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-0 py-0 text-left text-[14px] font-normal shadow-none [field-sizing:content] hover:bg-[#f5f6f8] focus:bg-[#f5f6f8] focus-visible:ring-0 rounded-[4px]",
-                        relativeSuggestionsOpen && "bg-[#f5f6f8]",
+                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-0 py-0 text-left text-[14px] font-normal shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
+                        relativeSuggestionsOpen && "bg-[#f4f4f0]",
                       )}
                       aria-label="Relative offset"
                     />
@@ -820,7 +872,7 @@ export function TimepointRow({
               </div>
             </div>
             )}
-            <div className={cn("flex items-start", !isAnchor && "-mt-1")}>
+            <div className="flex items-start">
               <CalendarIcon className="h-3.5 w-3.5 shrink-0 mr-[9px] mt-[9px] text-[#a8adb5]" aria-hidden />
               <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-0 text-sm font-normal" onClick={(event) => event.stopPropagation()}>
@@ -830,15 +882,15 @@ export function TimepointRow({
                     type="button"
                     variant="ghost"
                     className={cn(
-                      "h-8 w-fit justify-start border-0 bg-transparent px-0 py-0 pr-2 text-[14px] font-normal shadow-none hover:bg-[#f5f6f8]",
-                      isActive ? "text-[#161616]" : "text-[#6b6b74]",
+                      "h-8 w-fit justify-start border-0 bg-transparent pl-0 pr-1 py-0 text-[14px] font-normal shadow-none hover:bg-[#f0f0eb]",
+                      "text-[#161616]",
                     )}
                     aria-label="Choose event day"
                   >
                     {formattedDateLabel}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0" align="start" collisionPadding={8}>
                   <Calendar
                     mode="single"
                     selected={resolvedAt}
@@ -849,7 +901,7 @@ export function TimepointRow({
               </Popover>
               {timeEntryActive ? (
                 <>
-                  <span className={cn("text-[14px]", isActive ? "text-[#161616]" : "text-[#6b6b74]")}>at</span>
+                  <span className="px-1 text-[14px] text-[#d4d4d0]">|</span>
                   <div ref={setStartTimeAnchorEl} className="relative h-8 w-fit">
                     <Input
                       ref={startTimeInputRef}
@@ -904,7 +956,7 @@ export function TimepointRow({
                             : undefined
                       }
                     >
-                      {startTimeOptions.map((option) => {
+                      {filteredStartTimeOptions.map((option) => {
                         const isSelected =
                           hasScheduledTime && option.value === selectedStartTimeValue;
                         return (
@@ -931,7 +983,7 @@ export function TimepointRow({
                       })}
                     </AnchoredList>
                   </div>
-                  <span className={cn("text-[14px]", isActive ? "text-[#161616]" : "text-[#6b6b74]")}>-</span>
+                  <span className="px-1 text-[14px] text-[#161616]">-</span>
                   <div ref={setEndTimeAnchorEl} className="relative h-8 w-fit">
                     <Input
                       value={endTimeInput}
@@ -989,7 +1041,7 @@ export function TimepointRow({
                             : undefined
                       }
                     >
-                      {endTimeOptions.map((option) => {
+                      {filteredEndTimeOptions.map((option) => {
                         const isSelected = hasScheduledTime && option.value === selectedEndTimeValue;
                         return (
                           <button
@@ -1038,43 +1090,59 @@ export function TimepointRow({
                 )}
               </div>
             </div>
-            <div className="flex items-start mt-1">
-              <div className="min-w-0 flex-1 flex items-start">
-              {!showDescriptionInput ? (
-                <button
-                  type="button"
-                  className="inline-flex h-8 min-w-0 flex-1 items-center bg-transparent pr-2 text-left text-[14px] font-normal text-[#a8adb5] hover:text-[#8f959e]"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setShowDescriptionInput(true);
-                    requestAnimationFrame(() => {
-                      descriptionInputRef.current?.focus();
-                    });
+            <AnimatePresence initial={false}>
+              {(isActive || Boolean(description.trim())) && (
+                <motion.div
+                  key="description-row"
+                  initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                  transition={{
+                    height: { duration: 0.18, ease: [0.33, 1, 0.68, 1] },
+                    opacity: { duration: 0.14, ease: [0.33, 1, 0.68, 1] },
                   }}
+                  style={{ overflow: "hidden" }}
                 >
-                  Add description
-                </button>
-              ) : (
-                <textarea
-                  ref={descriptionInputRef}
-                  value={description}
-                  placeholder="Add description"
-                  rows={1}
-                  className="block min-h-8 min-w-0 flex-1 resize-none border-0 bg-transparent px-0 pr-2 py-[6px] text-sm font-normal leading-5 text-[#161616] shadow-none outline-none placeholder:text-[#a8adb5] focus-visible:ring-0 [field-sizing:content]"
-                  onClick={(event) => event.stopPropagation()}
-                  onChange={(event) => onDescriptionChange(event.target.value)}
-                  onBlur={() => {
-                    if (!description.trim()) {
-                      if (description) {
-                        onDescriptionChange("");
-                      }
-                      setShowDescriptionInput(false);
-                    }
-                  }}
-                />
+                  <div className="flex items-start pt-1">
+                    <div className="min-w-0 flex-1 flex items-start">
+                      {!showDescriptionInput ? (
+                        <button
+                          type="button"
+                          className="inline-flex h-8 min-w-0 flex-1 items-center bg-transparent pr-2 text-left text-[14px] font-normal text-[#a8adb5] hover:text-[#8f959e]"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setShowDescriptionInput(true);
+                            requestAnimationFrame(() => {
+                              descriptionInputRef.current?.focus();
+                            });
+                          }}
+                        >
+                          Add description
+                        </button>
+                      ) : (
+                        <textarea
+                          ref={descriptionInputRef}
+                          value={description}
+                          placeholder="Add description"
+                          rows={1}
+                          className="block min-h-8 min-w-0 flex-1 resize-none border-0 bg-transparent px-0 pr-2 py-[6px] text-sm font-normal leading-5 text-[#161616] shadow-none outline-none placeholder:text-[#a8adb5] focus-visible:ring-0 [field-sizing:content]"
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) => onDescriptionChange(event.target.value)}
+                          onBlur={() => {
+                            if (!description.trim()) {
+                              if (description) {
+                                onDescriptionChange("");
+                              }
+                              setShowDescriptionInput(false);
+                            }
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
               )}
-              </div>
-            </div>
+            </AnimatePresence>
           </div>
         </div>
       </div>

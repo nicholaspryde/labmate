@@ -4,6 +4,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { DEFAULT_ANCHOR_NAME, RELATIVE_TO_PREVIOUS, type OffsetMode, type Series } from "@/lib/types";
 import {
   computeAuthorOffsetMinutes,
@@ -60,24 +61,48 @@ export function TimepointEditor({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [activeTimepointId, setActiveTimepointId] = useState<string | null>(null);
   const [nameFocusTimepointId, setNameFocusTimepointId] = useState<string | null>(null);
-  const [animateTimepointId, setAnimateTimepointId] = useState<string | null>(null);
+  const [addAnimationKey, setAddAnimationKey] = useState(0);
   const pendingNameFocusRef = useRef(false);
   const seriesNameInputRef = useRef<HTMLInputElement>(null);
   const hasInitialSeriesNameFocusRef = useRef(false);
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!series) {
+    if (!series || series.timepoints.length === 0) {
       setActiveTimepointId(null);
       return;
     }
-    if (series.timepoints.length === 0) {
+    if (activeTimepointId && !series.timepoints.some((timepoint) => timepoint.id === activeTimepointId)) {
       setActiveTimepointId(null);
-      return;
-    }
-    if (!activeTimepointId || !series.timepoints.some((timepoint) => timepoint.id === activeTimepointId)) {
-      setActiveTimepointId(series.timepoints[0].id);
     }
   }, [activeTimepointId, series]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+      if (
+        target.closest("[data-timepoint-row]") ||
+        target.closest("[data-anchored-list]") ||
+        target.closest("[data-radix-popper-content-wrapper]")
+      ) {
+        return;
+      }
+      setActiveTimepointId(null);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  // Derive the newly-added timepoint id during render so that the row mounts with
+  // the correct `initial` style on its very first paint — avoiding the stutter
+  // you get when triggering animations from useLayoutEffect (Motion's controls.set
+  // defers to the next frame, so the row would paint once at its final state, then
+  // snap to the from-state, then animate).
+  const newlyAddedTimepointId =
+    pendingNameFocusRef.current && series && series.timepoints.length > 0
+      ? series.timepoints[series.timepoints.length - 1].id
+      : null;
 
   useLayoutEffect(() => {
     if (!series || !pendingNameFocusRef.current) {
@@ -92,11 +117,11 @@ export function TimepointEditor({
 
     setActiveTimepointId(newTimepoint.id);
     setNameFocusTimepointId(newTimepoint.id);
-    setAnimateTimepointId(newTimepoint.id);
   }, [series]);
 
   const handleAddTimepoint = () => {
     pendingNameFocusRef.current = true;
+    setAddAnimationKey((key) => key + 1);
     onAddTimepoint();
   };
 
@@ -147,7 +172,7 @@ export function TimepointEditor({
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col pb-8">
         <div className="sticky top-0 z-10 flex flex-col gap-2 bg-background pb-4">
           <div className="flex items-center gap-3">
             <Input
@@ -166,7 +191,7 @@ export function TimepointEditor({
                 const ics = buildIcs([series], DEFAULT_EXPORT_DURATION_MINUTES);
                 triggerIcsDownload(ics);
               }}
-              className="h-8 shrink-0 rounded-[12px] px-4 text-[14px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f5f6f8] hover:text-[#161616]"
+              className="h-8 shrink-0 cursor-pointer rounded-[12px] px-4 text-[14px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f0f0eb] hover:text-[#161616]"
             >
               Export to calendar
             </Button>
@@ -243,7 +268,7 @@ export function TimepointEditor({
                   onDelete={index > 0 ? () => onDeleteTimepoint(timepoint.id) : undefined}
                   autoFocusName={nameFocusTimepointId === timepoint.id}
                   onNameFocusComplete={() => setNameFocusTimepointId(null)}
-                  animateEnter={animateTimepointId === timepoint.id}
+                  animateEnter={newlyAddedTimepointId === timepoint.id}
                 />
                 );
               })}
@@ -251,14 +276,22 @@ export function TimepointEditor({
           </SortableContext>
         </DndContext>
 
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-12 w-full rounded-[12px] text-[14px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f5f6f8] hover:text-[#161616]"
-          onClick={handleAddTimepoint}
+        <motion.div
+          key={addAnimationKey}
+          initial={addAnimationKey > 0 && !shouldReduceMotion ? { y: -8 } : false}
+          animate={{ y: 0 }}
+          transition={{ type: "spring", visualDuration: 0.42, bounce: 0 }}
+          style={{ willChange: "transform" }}
         >
-          + Timepoint
-        </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-12 w-full cursor-pointer rounded-[12px] text-[14px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f0f0eb] hover:text-[#161616]"
+            onClick={handleAddTimepoint}
+          >
+            + Timepoint
+          </Button>
+        </motion.div>
         </div>
     </div>
   );
