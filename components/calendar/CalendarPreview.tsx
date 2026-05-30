@@ -6,7 +6,7 @@ import {
   type CalendarEvent,
 } from "@ilamy/calendar";
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import "@/lib/dayjs";
+import dayjs from "@/lib/dayjs";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { formatCalendarPreviewLabel, type CalendarEventData } from "@/lib/calendarMapping";
 import { dayDeltaFromDates } from "@/lib/timepointMath";
@@ -21,6 +21,25 @@ type CalendarPreviewProps = {
 };
 
 const DEFAULT_ACCENT = "#6c96ff";
+/** ilamy entrance stagger (0.05s × ~7) + 0.2s motion duration */
+const CALENDAR_ENTRANCE_MS = 400;
+
+function CalendarFocusDateSync({ focusDate }: { focusDate: string | null }) {
+  const { currentDate, setCurrentDate } = useIlamyCalendarContext();
+
+  useEffect(() => {
+    if (!focusDate) {
+      return;
+    }
+    const next = dayjs(focusDate);
+    if (!next.isValid() || next.isSame(currentDate, "month")) {
+      return;
+    }
+    setCurrentDate(next);
+  }, [currentDate, focusDate, setCurrentDate]);
+
+  return null;
+}
 
 type EventChipProps = {
   event: CalendarEvent;
@@ -96,11 +115,21 @@ function CalendarPreviewImpl({
   onShiftSeriesDays,
 }: CalendarPreviewProps) {
   const [mounted, setMounted] = useState(false);
+  const [entranceComplete, setEntranceComplete] = useState(false);
   const eventStartsRef = useRef<Map<string, Date>>(new Map());
+  const initialDateRef = useRef(focusDate);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => setEntranceComplete(true), CALENDAR_ENTRANCE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [mounted]);
 
   useEffect(() => {
     const starts = new Map<string, Date>();
@@ -124,12 +153,21 @@ function CalendarPreviewImpl({
     }
   };
 
-  const headerComponent = useMemo(() => <CalendarHeader />, []);
+  const headerComponent = useMemo(
+    () => (
+      <>
+        <CalendarFocusDateSync focusDate={focusDate} />
+        <CalendarHeader />
+      </>
+    ),
+    [focusDate],
+  );
 
   return (
     <div
+      data-calendar-static={entranceComplete || undefined}
       className={cn(
-        "flex h-[calc(100vh-3rem)] min-h-0 flex-col overflow-hidden rounded-[12px] border border-[#e3e3e3] bg-white",
+        "flex h-[calc(100vh-3rem)] min-h-0 flex-col overflow-hidden rounded-[24px] border-0 bg-white",
       )}
       style={{
         boxShadow:
@@ -139,10 +177,9 @@ function CalendarPreviewImpl({
       <div className="min-h-0 flex-1">
         {mounted ? (
           <IlamyCalendar
-            key={focusDate ?? "default"}
             events={events}
             initialView="month"
-            initialDate={focusDate ?? undefined}
+            initialDate={initialDateRef.current ?? undefined}
             disableCellClick
             disableEventClick
             disableDragAndDrop

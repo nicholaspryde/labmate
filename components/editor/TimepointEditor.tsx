@@ -1,9 +1,10 @@
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { Download } from "lucide-react";
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { DEFAULT_ANCHOR_NAME, RELATIVE_TO_PREVIOUS, type OffsetMode, type Series } from "@/lib/types";
 import {
@@ -14,7 +15,9 @@ import {
 } from "@/lib/timepointMath";
 import { TimepointRow } from "@/components/editor/TimepointRow";
 import { OffsetModeToggle } from "@/components/editor/OffsetModeToggle";
+import { PresetsMenu } from "@/components/presets/PresetsMenu";
 import { buildIcs, triggerIcsDownload } from "@/lib/icsExport";
+import type { ProtocolPreset } from "@/lib/presets/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -22,6 +25,8 @@ const DEFAULT_EXPORT_DURATION_MINUTES = 30;
 type TimepointEditorProps = {
   series: Series | null;
   mode: OffsetMode;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  showTopBarFade?: boolean;
   highlightedTimepointId?: string | null;
   onModeChange: (mode: OffsetMode) => void;
   onSeriesNameChange: (name: string) => void;
@@ -37,11 +42,14 @@ type TimepointEditorProps = {
   onTimepointAuthorOffsetChange: (timepointId: string, minutes: number) => void;
   onTimepointAbsoluteOffsetChange: (timepointId: string, minutesFromStart: number) => void;
   onTimepointRelativeReferenceChange: (timepointId: string, relativeToTimepointId: string | null) => void;
+  onApplyPreset: (preset: ProtocolPreset) => void;
 };
 
 export function TimepointEditor({
   series,
   mode,
+  scrollContainerRef,
+  showTopBarFade = false,
   highlightedTimepointId = null,
   onModeChange,
   onSeriesNameChange,
@@ -57,12 +65,15 @@ export function TimepointEditor({
   onTimepointAuthorOffsetChange,
   onTimepointAbsoluteOffsetChange,
   onTimepointRelativeReferenceChange,
+  onApplyPreset,
 }: TimepointEditorProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [activeTimepointId, setActiveTimepointId] = useState<string | null>(null);
   const [nameFocusTimepointId, setNameFocusTimepointId] = useState<string | null>(null);
+  const [descriptionEnterSkipId, setDescriptionEnterSkipId] = useState<string | null>(null);
   const [addAnimationKey, setAddAnimationKey] = useState(0);
   const pendingNameFocusRef = useRef(false);
+  const pendingScrollTimepointIdRef = useRef<string | null>(null);
   const seriesNameInputRef = useRef<HTMLInputElement>(null);
   const hasInitialSeriesNameFocusRef = useRef(false);
   const shouldReduceMotion = useReducedMotion();
@@ -83,6 +94,7 @@ export function TimepointEditor({
       if (!target) return;
       if (
         target.closest("[data-timepoint-row]") ||
+        target.closest("[data-add-timepoint-button]") ||
         target.closest("[data-anchored-list]") ||
         target.closest("[data-radix-popper-content-wrapper]")
       ) {
@@ -117,7 +129,41 @@ export function TimepointEditor({
 
     setActiveTimepointId(newTimepoint.id);
     setNameFocusTimepointId(newTimepoint.id);
+    setDescriptionEnterSkipId(newTimepoint.id);
+    pendingScrollTimepointIdRef.current = newTimepoint.id;
   }, [series]);
+
+  useLayoutEffect(() => {
+    const pendingScrollTimepointId = pendingScrollTimepointIdRef.current;
+    if (!pendingScrollTimepointId || activeTimepointId !== pendingScrollTimepointId) {
+      return;
+    }
+
+    pendingScrollTimepointIdRef.current = null;
+
+    const scrollContainer = scrollContainerRef?.current;
+    if (!scrollContainer) {
+      return;
+    }
+
+    const scrollToShowAddButton = () => {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight - scrollContainer.clientHeight,
+        behavior: shouldReduceMotion ? "auto" : "smooth",
+      });
+    };
+
+    scrollToShowAddButton();
+
+    setDescriptionEnterSkipId(null);
+
+    if (shouldReduceMotion) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(scrollToShowAddButton, 220);
+    return () => window.clearTimeout(timeoutId);
+  }, [activeTimepointId, scrollContainerRef, shouldReduceMotion]);
 
   const handleAddTimepoint = () => {
     pendingNameFocusRef.current = true;
@@ -173,7 +219,7 @@ export function TimepointEditor({
 
   return (
     <div className="flex flex-col pb-8">
-        <div className="sticky top-0 z-10 flex flex-col gap-2 bg-background pb-4">
+        <div className="sticky top-0 z-10 relative flex flex-col gap-2 bg-background pb-4">
           <div className="flex items-center gap-3">
             <Input
               ref={seriesNameInputRef}
@@ -181,23 +227,33 @@ export function TimepointEditor({
               onChange={(event) => onSeriesNameChange(event.target.value)}
               placeholder="Timeseries name"
               aria-label="Timeseries name"
-              className="h-auto min-w-0 flex-1 border-0 bg-background p-0 text-[20px] text-[#161616] shadow-none focus-visible:ring-0 placeholder:text-[#a8adb5]"
+              className="h-auto min-w-0 flex-1 border-0 bg-background px-1 py-0 text-[20px] font-medium text-[#161616]/70 shadow-none transition-colors duration-150 ease-[cubic-bezier(0.33,1,0.68,1)] hover:text-[#161616] focus:text-[#161616] focus-visible:ring-0 placeholder:text-[#a8adb5]/70 hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color_150ms_cubic-bezier(0.33,1,0.68,1)]"
             />
             <Button
               type="button"
-              variant="ghost"
+              size="icon"
               disabled={series.timepoints.length === 0}
               onClick={() => {
                 const ics = buildIcs([series], DEFAULT_EXPORT_DURATION_MINUTES);
                 triggerIcsDownload(ics);
               }}
-              className="h-8 shrink-0 cursor-pointer rounded-[12px] px-4 text-[14px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f0f0eb] hover:text-[#161616]"
+              aria-label="Export to calendar"
+              className="h-8 w-8 shrink-0 rounded-[12px] border-0 bg-[#f0f0eb] text-[#161616] shadow-none hover:bg-[#e8e8e4] hover:text-[#161616]"
             >
-              Export to calendar
+              <Download className="h-4 w-4 text-[#161616]" aria-hidden />
             </Button>
           </div>
 
-          <OffsetModeToggle value={mode} onChange={onModeChange} />
+          <div className="flex items-center gap-1">
+            <OffsetModeToggle value={mode} onChange={onModeChange} />
+            <PresetsMenu series={series} offsetMode={mode} onApplyPreset={onApplyPreset} />
+          </div>
+          {showTopBarFade && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 -bottom-8 h-8 bg-gradient-to-b from-background to-transparent"
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -269,6 +325,7 @@ export function TimepointEditor({
                   autoFocusName={nameFocusTimepointId === timepoint.id}
                   onNameFocusComplete={() => setNameFocusTimepointId(null)}
                   animateEnter={newlyAddedTimepointId === timepoint.id}
+                  skipDescriptionEnterAnimation={descriptionEnterSkipId === timepoint.id}
                 />
                 );
               })}
@@ -286,7 +343,8 @@ export function TimepointEditor({
           <Button
             type="button"
             variant="ghost"
-            className="h-12 w-full cursor-pointer rounded-[12px] text-[14px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f0f0eb] hover:text-[#161616]"
+            data-add-timepoint-button
+            className="h-12 w-full cursor-pointer rounded-[12px] text-[12px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f0f0eb] hover:text-[#161616]"
             onClick={handleAddTimepoint}
           >
             + Timepoint

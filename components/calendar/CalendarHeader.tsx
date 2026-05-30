@@ -26,65 +26,64 @@ export function CalendarHeader() {
   const yearLabel = currentDate.format("YYYY");
 
   return (
-    <div className="flex w-full items-center justify-between gap-4 border-b border-[#e3e3e3] px-4 py-2">
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-2">
+    <div className="relative flex w-full items-center justify-between gap-4 border-b border-[#e3e3e3] px-4 py-2">
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={today}
+          className="h-10 rounded-sm px-4 text-xs font-medium text-[#161616] hover:bg-[#f5f5f5]"
+          style={{ letterSpacing: "0.16px" }}
+        >
+          Today
+        </Button>
+        <div className="flex items-center">
           <Button
             type="button"
             variant="ghost"
-            onClick={today}
-            className="h-10 rounded-sm px-4 text-sm font-medium text-[#161616] hover:bg-[#f5f5f5]"
-            style={{ letterSpacing: "0.16px" }}
+            size="icon"
+            aria-label="Previous"
+            onClick={prevPeriod}
+            className="h-10 w-10 rounded-sm text-[#161616] hover:bg-[#f5f5f5]"
           >
-            Today
+            <ChevronLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Previous"
-              onClick={prevPeriod}
-              className="h-10 w-10 rounded-sm text-[#161616] hover:bg-[#f5f5f5]"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Next"
-              onClick={nextPeriod}
-              className="h-10 w-10 rounded-sm text-[#161616] hover:bg-[#f5f5f5]"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Next"
+            onClick={nextPeriod}
+            className="h-10 w-10 rounded-sm text-[#161616] hover:bg-[#f5f5f5]"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
         </div>
-        <h2
-          className={cn(
-            "whitespace-nowrap text-[20px] font-semibold leading-normal text-[#161616]",
-          )}
-          style={{ letterSpacing: "-0.24px" }}
-        >
-          {monthLabel}{" "}
-          <span className="font-normal">{yearLabel}</span>
-        </h2>
       </div>
+
+      <h2
+        className={cn(
+          "pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[20px] font-semibold leading-normal text-[#161616]",
+        )}
+        style={{ letterSpacing: "-0.24px" }}
+      >
+        {monthLabel}{" "}
+        <span className="font-normal">{yearLabel}</span>
+      </h2>
 
       <Select
         value={VIEW_OPTIONS.some((o) => o.value === view) ? view : "week"}
         onValueChange={(next) => setView(next as CalendarView)}
       >
         <SelectTrigger
-          className="h-10 w-auto gap-2 rounded-sm border-0 bg-transparent px-4 py-2 text-sm font-medium text-[#161616] focus:ring-0"
+          className="h-10 w-auto gap-2 rounded-sm border-0 bg-transparent px-4 py-2 text-xs font-medium text-[#161616] focus:ring-0"
           style={{ letterSpacing: "0.16px" }}
         >
           <SelectValue />
         </SelectTrigger>
         <SelectContent align="end">
           {VIEW_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
+            <SelectItem key={option.value} value={option.value} className="text-xs">
               {option.label}
             </SelectItem>
           ))}

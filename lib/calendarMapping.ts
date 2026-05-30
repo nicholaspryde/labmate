@@ -37,10 +37,13 @@ export function mapSeriesToCalendarEvents(series: Series[]): IlamyCalendarEvent[
           timepointId: timepoint.id,
           timepointNumber: index + 1,
           timepointName: timepoint.name,
-          timeLabel: timepoint.resolvedAt.toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
-          }),
+          timeLabel:
+            timepoint.hasScheduledTime === true
+              ? timepoint.resolvedAt.toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
+              : "",
         } satisfies CalendarEventData,
       };
     }),

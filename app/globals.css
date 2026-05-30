@@ -50,6 +50,7 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+  --color-black: #161616;
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -59,6 +60,10 @@
 @layer base {
   * {
     @apply border-border;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
   }
 
   body {
@@ -378,5 +383,18 @@
 
   [data-testid="ilamy-calendar"] [data-testid="grid-cell-content"] > .text-muted-foreground:hover {
     color: #161616 !important;
+  }
+
+  /* After the first entrance (see CalendarPreview), suppress ilamy's bundled
+     motion slide/fade so navigation and event updates stay instant. */
+  [data-calendar-static] [data-testid="ilamy-calendar"] [data-testid="calendar-body"],
+  [data-calendar-static] [data-testid="ilamy-calendar"] [data-testid^="horizontal-event-"],
+  [data-calendar-static] [data-testid="ilamy-calendar"] [data-testid^="horizontal-event-"] *,
+  [data-calendar-static] [data-testid="ilamy-calendar"] [data-testid^="week-header-weekday-"],
+  [data-calendar-static] [data-testid="ilamy-calendar"] [data-testid^="month-header-weekday-"],
+  [data-calendar-static] [data-testid="ilamy-calendar"] [data-testid="calendar-month-button"] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }

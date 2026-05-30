@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useLayoutEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useDeferredValue, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import { CalendarPreview } from "@/components/calendar/CalendarPreview";
 import { TimepointEditor } from "@/components/editor/TimepointEditor";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { BOOTSTRAP_SERIES_ID, initialState, nowAnchorIso, seriesReducer } from "
 export function TimepointCalendarApp() {
   const [state, dispatch] = useReducer(seriesReducer, initialState);
   const [highlightedTimepointId, setHighlightedTimepointId] = useState<string | null>(null);
+  const [isEditorScrolled, setIsEditorScrolled] = useState(false);
+  const editorScrollRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     dispatch({
@@ -47,10 +49,16 @@ export function TimepointCalendarApp() {
           </div>
         ) : (
           <div className="grid h-full gap-x-6 gap-y-0 lg:h-[calc(100vh-1.5rem)] lg:grid-cols-[460px_1fr] lg:grid-rows-1">
-            <div className="scrollbar-thin min-h-0 overflow-y-auto">
+            <div
+              ref={editorScrollRef}
+              className="scrollbar-thin min-h-0 overflow-y-auto"
+              onScroll={(event) => setIsEditorScrolled(event.currentTarget.scrollTop > 6)}
+            >
             <TimepointEditor
               series={activeSeries}
               mode={state.offsetMode}
+              scrollContainerRef={editorScrollRef}
+              showTopBarFade={isEditorScrolled}
               highlightedTimepointId={highlightedTimepointId}
               onModeChange={(mode) => dispatch({ type: "set-offset-mode", mode })}
               onSeriesNameChange={(name) =>
@@ -148,6 +156,15 @@ export function TimepointCalendarApp() {
                   timepointId,
                   relativeToTimepointId,
                   mode: state.offsetMode,
+                });
+              }}
+              onApplyPreset={(preset) => {
+                if (!activeSeries) return;
+                dispatch({
+                  type: "apply-preset",
+                  preset,
+                  target: "replace",
+                  seriesId: activeSeries.id,
                 });
               }}
             />

@@ -1,7 +1,7 @@
 import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { addMinutes, format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { fromTotalMinutes } from "@/lib/timepointMath";
@@ -170,10 +170,20 @@ function formatTimeLabel(resolvedAt: Date, hour: number, minute: number): string
 
 function timeOptionButtonClassName(isSelected: boolean) {
   return cn(
-    "flex w-full cursor-default items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent",
+    "flex w-full cursor-pointer items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent",
     isSelected && "bg-[#f0f0eb] font-medium text-[#161616] hover:bg-[#ebebe5]",
   );
 }
+
+const fieldRevealOpacityTransition = {
+  duration: 0.14,
+  ease: [0.33, 1, 0.68, 1] as const,
+};
+
+const fieldRevealTransition = {
+  height: { duration: 0.18, ease: [0.33, 1, 0.68, 1] as const },
+  opacity: fieldRevealOpacityTransition,
+};
 
 function closestTimeSlotValue(reference = new Date()): string {
   const totalMinutes = reference.getHours() * 60 + reference.getMinutes();
@@ -189,6 +199,11 @@ function timeValueToLabel(resolvedAt: Date, value: string): string {
     return "";
   }
   return formatTimeLabel(resolvedAt, hour, minute);
+}
+
+function getTimeInputWidthCh(value: string, placeholder: string): number {
+  // +1 accounts for the caret; placeholder length ensures empty inputs fit their label.
+  return Math.max((value || placeholder).length + 1, 7);
 }
 
 function durationFromEndTime(resolvedAt: Date, endHour: number, endMinute: number): number {
@@ -274,6 +289,7 @@ type TimepointRowProps = {
   autoFocusName?: boolean;
   onNameFocusComplete?: () => void;
   animateEnter?: boolean;
+  skipDescriptionEnterAnimation?: boolean;
 };
 
 export function TimepointRow({
@@ -307,6 +323,7 @@ export function TimepointRow({
   autoFocusName = false,
   onNameFocusComplete,
   animateEnter = false,
+  skipDescriptionEnterAnimation = false,
 }: TimepointRowProps) {
   const shouldReduceMotion = useReducedMotion();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -318,7 +335,7 @@ export function TimepointRow({
     transition,
   };
   const cardShadow =
-    "0px 3px 6px -2px lch(0% 0 0 / 0.02), 0px 1px 1px lch(0% 0 0 / 0.04)";
+    "0px 0px 6px rgba(0, 0, 0, 0.02), 0px 1px 2px rgba(0, 0, 0, 0.08)";
   const [showDescriptionInput, setShowDescriptionInput] = useState(Boolean(description.trim()));
   const [timeEntryActive, setTimeEntryActive] = useState(hasScheduledTime);
   const [startTimeInput, setStartTimeInput] = useState("");
@@ -328,6 +345,9 @@ export function TimepointRow({
   const [timeInputError, setTimeInputError] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const startTimeInputRef = useRef<HTMLInputElement>(null);
+  const endTimeInputRef = useRef<HTMLInputElement>(null);
+  const skipNextStartTimeBlurApplyRef = useRef(false);
+  const skipNextEndTimeBlurApplyRef = useRef(false);
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
   const [relativeOffsetAnchorEl, setRelativeOffsetAnchorEl] = useState<HTMLDivElement | null>(null);
   const [startTimeAnchorEl, setStartTimeAnchorEl] = useState<HTMLDivElement | null>(null);
@@ -435,7 +455,7 @@ export function TimepointRow({
   const selectedStartTimeValue = format(resolvedAt, "HH:mm");
   const resolvedEndAt = addMinutes(resolvedAt, durationMinutes);
   const selectedEndTimeValue = format(resolvedEndAt, "HH:mm");
-  const formattedDateLabel = format(resolvedAt, "EEE, MMMM d");
+  const formattedDateLabel = format(resolvedAt, "EEEE, MMMM d");
   const startTimeOptions = buildSingleTimeOptions(
     resolvedAt,
     hasScheduledTime ? selectedStartTimeValue : undefined,
@@ -455,16 +475,16 @@ export function TimepointRow({
     endTimeInput.trim() !== "" && endTimeInput !== currentEndLabel
       ? filterTimeOptions(endTimeOptions, endTimeInput)
       : endTimeOptions;
-  const startTimeInputWidthCh = Math.max(startTimeInput.length + 1, 6);
-  const endTimeInputWidthCh = Math.max(endTimeInput.length + 1, 6);
   const timeFieldClassName = cn(
-    "h-8 w-auto min-w-[3rem] rounded-[4px] border-0 bg-white px-1 py-0 text-left text-[14px] font-normal shadow-none hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0",
+    "h-8 w-auto min-w-[3rem] rounded-[4px] border-0 bg-white px-1 py-0 text-left text-[14px] font-normal shadow-none transition-colors duration-150 hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0",
     "text-[#161616]",
   );
   const defaultStartScrollValue = closestTimeSlotValue();
   const defaultEndScrollValue = closestTimeSlotValue(addMinutes(new Date(), 60));
   const defaultStartTimeLabel = timeValueToLabel(resolvedAt, defaultStartScrollValue);
   const defaultEndTimeLabel = timeValueToLabel(resolvedAt, defaultEndScrollValue);
+  const startTimeInputWidthCh = getTimeInputWidthCh(startTimeInput, defaultStartTimeLabel);
+  const endTimeInputWidthCh = getTimeInputWidthCh(endTimeInput, defaultEndTimeLabel);
 
   useEffect(() => {
     if (hasScheduledTime && !startSuggestionsOpen && !endSuggestionsOpen) {
@@ -504,6 +524,8 @@ export function TimepointRow({
     setStartTimeInput(formatTimeLabel(resolvedAt, hour, minute));
     setTimeInputError(null);
     setStartSuggestionsOpen(false);
+    skipNextStartTimeBlurApplyRef.current = true;
+    startTimeInputRef.current?.blur();
   };
 
   const commitEndTime = (hour: number, minute: number) => {
@@ -512,6 +534,8 @@ export function TimepointRow({
     setEndTimeInput(formatTimeLabel(resolvedAt, hour, minute));
     setTimeInputError(null);
     setEndSuggestionsOpen(false);
+    skipNextEndTimeBlurApplyRef.current = true;
+    endTimeInputRef.current?.blur();
   };
 
   const applyStartTimeInput = () => {
@@ -544,6 +568,40 @@ export function TimepointRow({
     setTimeInputError("Use format like 2:00pm or 14:30");
   };
 
+  const clearScheduledTime = () => {
+    const dateOnly = new Date(resolvedAt);
+    dateOnly.setHours(0, 0, 0, 0);
+    onDateTimeChange(dateOnly);
+    onScheduledTimeChange(false);
+    setTimeEntryActive(false);
+    setStartTimeInput("");
+    setEndTimeInput("");
+    setTimeInputError(null);
+    setStartSuggestionsOpen(false);
+    setEndSuggestionsOpen(false);
+  };
+
+  const cancelTimeEntryIfEmpty = () => {
+    if (hasScheduledTime) {
+      return;
+    }
+    if (startTimeInput.trim() || endTimeInput.trim()) {
+      return;
+    }
+
+    const active = document.activeElement;
+    if (active === startTimeInputRef.current || active === endTimeInputRef.current) {
+      return;
+    }
+
+    setTimeEntryActive(false);
+    setStartTimeInput("");
+    setEndTimeInput("");
+    setTimeInputError(null);
+    setStartSuggestionsOpen(false);
+    setEndSuggestionsOpen(false);
+  };
+
   const applyDisplayOffsetInput = (): boolean => {
     const parsed = parseRelativeOffsetInput(relativeOffsetInput);
     if (parsed === null) {
@@ -571,14 +629,14 @@ export function TimepointRow({
     <div
       ref={setNodeRef}
       style={dragStyle}
-      className={cn(isDragging && "opacity-50")}
+      className={cn(isDragging && "opacity-50", "scroll-mt-28")}
       onClick={onFocus}
       data-timepoint-row
+      data-timepoint-id={id}
     >
       <motion.div
         className={cn(
-          "group relative rounded-[12px] border bg-white p-3 transition-colors duration-150",
-          isHighlighted ? "border-[#004cff]/50" : "border-[#e3e3e3]",
+          "group relative rounded-[8px] border-0 bg-white p-3 transition-colors duration-150",
         )}
         style={{ boxShadow: cardShadow }}
         initial={
@@ -598,18 +656,18 @@ export function TimepointRow({
             type="button"
             aria-label="Delete timepoint"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:opacity-100"
+            className="pointer-events-none absolute right-3 top-3 z-20 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </button>
         )}
-      <div className="flex items-start gap-4">
         <div
           className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#dfe8ff] text-[11px] font-medium tabular-nums text-[#4c69b3] mt-1",
-            !isAnchor && "cursor-grab"
+            "absolute right-3 top-3 z-10 flex h-6 w-6 shrink-0 items-center justify-center text-[11px] font-medium tabular-nums text-[#a8adb5] transition-opacity duration-150",
+            onDelete && "group-hover:pointer-events-none group-hover:opacity-0",
+            !isAnchor && "cursor-grab",
           )}
           {...(!isAnchor ? attributes : {})}
           {...(!isAnchor ? listeners : {})}
@@ -617,18 +675,18 @@ export function TimepointRow({
           {index}
         </div>
 
-        <div className="min-w-0 flex-1 space-y-0">
+        <div className="min-w-0 space-y-0 pr-10">
           <Input
             ref={nameInputRef}
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
             placeholder="Add event name"
-            className="h-8 min-w-0 w-full border-0 bg-transparent px-0 py-0 text-[16px] font-medium text-[#161616] shadow-none focus-visible:ring-0 placeholder:text-[#a8adb5]"
+            className="h-8 min-w-0 w-full border-0 bg-transparent px-1 py-0 text-[15px] font-medium text-[#161616]/70 shadow-none transition-colors duration-150 ease-[cubic-bezier(0.33,1,0.68,1)] hover:text-[#161616] focus:text-[#161616] focus-visible:ring-0 placeholder:text-[#a8adb5]/70 hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color_150ms_cubic-bezier(0.33,1,0.68,1)]"
             onFocus={onFocus}
             aria-label="Add event name"
           />
 
-          <div className="flex flex-col gap-0 pr-3 pb-0 pt-1">
+          <div className="flex flex-col gap-0 pr-3 pb-0 pt-[0px]">
             {!isAnchor && (
             <div className="flex items-start">
               <Plus className="h-3.5 w-3.5 shrink-0 mr-[9px] mt-[9px] text-[#a8adb5]" aria-hidden />
@@ -686,7 +744,7 @@ export function TimepointRow({
                         <button
                           key={suggestion}
                           type="button"
-                          className="flex w-full cursor-default items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent"
+                          className="flex w-full cursor-pointer items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent"
                           onMouseDown={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -851,7 +909,7 @@ export function TimepointRow({
                         <button
                           key={suggestion}
                           type="button"
-                          className="flex w-full cursor-default items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent"
+                          className="flex w-full cursor-pointer items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent"
                           onMouseDown={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -872,9 +930,7 @@ export function TimepointRow({
               </div>
             </div>
             )}
-            <div className="flex items-start">
-              <CalendarIcon className="h-3.5 w-3.5 shrink-0 mr-[9px] mt-[9px] text-[#a8adb5]" aria-hidden />
-              <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-0 text-sm font-normal" onClick={(event) => event.stopPropagation()}>
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
@@ -882,7 +938,7 @@ export function TimepointRow({
                     type="button"
                     variant="ghost"
                     className={cn(
-                      "h-8 w-fit justify-start border-0 bg-transparent pl-0 pr-1 py-0 text-[14px] font-normal shadow-none hover:bg-[#f0f0eb]",
+                      "h-8 w-fit justify-start border-0 bg-transparent pl-1 pr-1 py-0 text-[14px] font-normal shadow-none hover:bg-[#f0f0eb]",
                       "text-[#161616]",
                     )}
                     aria-label="Choose event day"
@@ -899,8 +955,17 @@ export function TimepointRow({
                   />
                 </PopoverContent>
               </Popover>
-              {timeEntryActive ? (
-                <>
+              <AnimatePresence initial={false} mode="popLayout">
+                {timeEntryActive ? (
+                  <motion.div
+                    key="time-inputs"
+                    className="group/time flex items-center"
+                    initial={shouldReduceMotion ? false : { opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
+                    transition={fieldRevealTransition}
+                    style={{ overflow: "hidden" }}
+                  >
                   <span className="px-1 text-[14px] text-[#d4d4d0]">|</span>
                   <div ref={setStartTimeAnchorEl} className="relative h-8 w-fit">
                     <Input
@@ -916,14 +981,23 @@ export function TimepointRow({
                         setEndSuggestionsOpen(false);
                       }}
                       onBlur={() => {
-                        applyStartTimeInput();
-                        setTimeout(() => setStartSuggestionsOpen(false), 120);
+                        if (skipNextStartTimeBlurApplyRef.current) {
+                          skipNextStartTimeBlurApplyRef.current = false;
+                        } else {
+                          applyStartTimeInput();
+                        }
+                        setTimeout(() => {
+                          setStartSuggestionsOpen(false);
+                          cancelTimeEntryIfEmpty();
+                        }, 120);
                       }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
                           event.preventDefault();
                           applyStartTimeInput();
                           setStartSuggestionsOpen(false);
+                          skipNextStartTimeBlurApplyRef.current = true;
+                          startTimeInputRef.current?.blur();
                         }
                         if (event.key === "Escape") {
                           setStartSuggestionsOpen(false);
@@ -986,6 +1060,7 @@ export function TimepointRow({
                   <span className="px-1 text-[14px] text-[#161616]">-</span>
                   <div ref={setEndTimeAnchorEl} className="relative h-8 w-fit">
                     <Input
+                      ref={endTimeInputRef}
                       value={endTimeInput}
                       placeholder={defaultEndTimeLabel}
                       onChange={(event) => {
@@ -997,14 +1072,23 @@ export function TimepointRow({
                         setStartSuggestionsOpen(false);
                       }}
                       onBlur={() => {
-                        applyEndTimeInput();
-                        setTimeout(() => setEndSuggestionsOpen(false), 120);
+                        if (skipNextEndTimeBlurApplyRef.current) {
+                          skipNextEndTimeBlurApplyRef.current = false;
+                        } else {
+                          applyEndTimeInput();
+                        }
+                        setTimeout(() => {
+                          setEndSuggestionsOpen(false);
+                          cancelTimeEntryIfEmpty();
+                        }, 120);
                       }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
                           event.preventDefault();
                           applyEndTimeInput();
                           setEndSuggestionsOpen(false);
+                          skipNextEndTimeBlurApplyRef.current = true;
+                          endTimeInputRef.current?.blur();
                         }
                         if (event.key === "Escape") {
                           setEndSuggestionsOpen(false);
@@ -1067,11 +1151,32 @@ export function TimepointRow({
                       })}
                     </AnchoredList>
                   </div>
-                </>
-              ) : (
+                  {hasScheduledTime ? (
+                    <button
+                      type="button"
+                      aria-label="Remove time"
+                      className="ml-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover/time:opacity-100 focus-visible:opacity-100"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        clearScheduledTime();
+                      }}
+                    >
+                      <X className="h-3 w-3" aria-hidden />
+                    </button>
+                  ) : null}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="time-trigger"
+                    initial={shouldReduceMotion ? false : { opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
+                    transition={fieldRevealTransition}
+                    style={{ overflow: "hidden" }}
+                  >
                 <button
                   type="button"
-                  className="inline-flex h-8 items-center bg-transparent px-2 text-[14px] font-normal text-[#a8adb5] hover:text-[#8f959e]"
+                  className="inline-flex h-8 items-center bg-transparent px-2 text-[12px] font-medium text-[#a8adb5] hover:text-[#8f959e]"
                   onClick={(event) => {
                     event.stopPropagation();
                     setTimeEntryActive(true);
@@ -1083,24 +1188,26 @@ export function TimepointRow({
                 >
                   + Time
                 </button>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
                 {isActive && timeInputError && (
                   <p className="text-xs text-red-600">{timeInputError}</p>
                 )}
               </div>
-            </div>
             <AnimatePresence initial={false}>
               {(isActive || Boolean(description.trim())) && (
                 <motion.div
                   key="description-row"
-                  initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
+                  initial={
+                    shouldReduceMotion || skipDescriptionEnterAnimation
+                      ? false
+                      : { opacity: 0, height: 0 }
+                  }
                   animate={{ opacity: 1, height: "auto" }}
                   exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-                  transition={{
-                    height: { duration: 0.18, ease: [0.33, 1, 0.68, 1] },
-                    opacity: { duration: 0.14, ease: [0.33, 1, 0.68, 1] },
-                  }}
+                  transition={fieldRevealTransition}
                   style={{ overflow: "hidden" }}
                 >
                   <div className="flex items-start pt-1">
@@ -1108,7 +1215,7 @@ export function TimepointRow({
                       {!showDescriptionInput ? (
                         <button
                           type="button"
-                          className="inline-flex h-8 min-w-0 flex-1 items-center bg-transparent pr-2 text-left text-[14px] font-normal text-[#a8adb5] hover:text-[#8f959e]"
+                          className="inline-flex h-8 min-w-0 flex-1 items-center bg-transparent px-1 text-left text-[14px] font-normal text-[#a8adb5] hover:text-[#8f959e]"
                           onClick={(event) => {
                             event.stopPropagation();
                             setShowDescriptionInput(true);
@@ -1145,7 +1252,6 @@ export function TimepointRow({
             </AnimatePresence>
           </div>
         </div>
-      </div>
       </motion.div>
     </div>
   );

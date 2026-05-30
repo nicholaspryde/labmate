@@ -1,4 +1,6 @@
 import { v4 as uuid } from "uuid";
+import { presetToTimepoints } from "@/lib/presets/serialize";
+import type { ProtocolPreset } from "@/lib/presets/types";
 import { RELATIVE_TO_PREVIOUS, type AppState, type OffsetMode, type Series } from "@/lib/types";
 import {
   defaultRelativeToTimepointId,
@@ -48,6 +50,12 @@ export type SeriesAction =
       mode: OffsetMode;
     }
   | { type: "shift-series-days"; seriesId: string; deltaDays: number }
+  | {
+      type: "apply-preset";
+      preset: ProtocolPreset;
+      target: "replace" | "new";
+      seriesId?: string;
+    }
   | { type: "replace-state"; state: AppState };
 
 export function nowAnchorIso(): string {
@@ -110,6 +118,24 @@ export const initialState: AppState = {
   activeSeriesId: BOOTSTRAP_SERIES_ID,
   offsetMode: "from-start",
 };
+
+function applyPresetToSeries(series: Series, preset: ProtocolPreset): Series {
+  return {
+    ...series,
+    anchorAt: nowAnchorIso(),
+    timepoints: presetToTimepoints(preset),
+  };
+}
+
+function createSeriesFromPreset(preset: ProtocolPreset, color: string): Series {
+  return {
+    id: uuid(),
+    name: preset.name,
+    color,
+    anchorAt: nowAnchorIso(),
+    timepoints: presetToTimepoints(preset),
+  };
+}
 
 export function seriesReducer(state: AppState, action: SeriesAction): AppState {
   switch (action.type) {
@@ -335,6 +361,31 @@ export function seriesReducer(state: AppState, action: SeriesAction): AppState {
         anchor.setDate(anchor.getDate() + action.deltaDays);
         return { ...series, anchorAt: anchor.toISOString() };
       });
+    case "apply-preset": {
+      if (action.target === "replace") {
+        if (!action.seriesId) {
+          return state;
+        }
+        return {
+          ...state,
+          offsetMode: action.preset.offsetMode,
+          series: state.series.map((series) =>
+            series.id === action.seriesId ? applyPresetToSeries(series, action.preset) : series,
+          ),
+        };
+      }
+
+      const series = createSeriesFromPreset(
+        action.preset,
+        SERIES_COLORS[state.series.length % SERIES_COLORS.length],
+      );
+      return {
+        ...state,
+        offsetMode: action.preset.offsetMode,
+        series: [...state.series, series],
+        activeSeriesId: series.id,
+      };
+    }
     case "replace-state":
       return action.state;
     default:

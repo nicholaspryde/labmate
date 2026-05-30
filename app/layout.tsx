@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { DialRoot } from "dialkit";
+import { InterfaceKit } from "interface-kit/react";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 import "dialkit/styles.css";
 
@@ -19,8 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
-        {children}
-        <DialRoot />
+        <Providers>
+          {children}
+          {process.env.NODE_ENV === "development" ? <InterfaceKit /> : null}
+          <DialRoot />
+        </Providers>
       </body>
     </html>
   );
