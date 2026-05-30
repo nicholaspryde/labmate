@@ -10,7 +10,7 @@ import dayjs from "@/lib/dayjs";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { formatCalendarPreviewLabel, type CalendarEventData } from "@/lib/calendarMapping";
 import { dayDeltaFromDates } from "@/lib/timepointMath";
-import { cn } from "@/lib/utils";
+import { cn, SURFACE_SHADOW } from "@/lib/utils";
 
 type CalendarPreviewProps = {
   events: Parameters<typeof IlamyCalendar>[0]["events"];
@@ -25,18 +25,20 @@ const DEFAULT_ACCENT = "#6c96ff";
 const CALENDAR_ENTRANCE_MS = 400;
 
 function CalendarFocusDateSync({ focusDate }: { focusDate: string | null }) {
-  const { currentDate, setCurrentDate } = useIlamyCalendarContext();
+  const { setCurrentDate } = useIlamyCalendarContext();
 
+  // Only follow editor anchor changes — do not depend on currentDate or we reset
+  // prev/next navigation back to the anchor month on every click.
   useEffect(() => {
     if (!focusDate) {
       return;
     }
     const next = dayjs(focusDate);
-    if (!next.isValid() || next.isSame(currentDate, "month")) {
+    if (!next.isValid()) {
       return;
     }
     setCurrentDate(next);
-  }, [currentDate, focusDate, setCurrentDate]);
+  }, [focusDate, setCurrentDate]);
 
   return null;
 }
@@ -164,16 +166,13 @@ function CalendarPreviewImpl({
   );
 
   return (
-    <div
-      data-calendar-static={entranceComplete || undefined}
-      className={cn(
-        "flex h-[calc(100vh-3rem)] min-h-0 flex-col overflow-hidden rounded-[24px] border-0 bg-white",
-      )}
-      style={{
-        boxShadow:
-          "0px 3px 6px -2px lch(0% 0 0 / 0.02), 0px 1px 1px lch(0% 0 0 / 0.04)",
-      }}
-    >
+    <div className="rounded-[24px]" style={{ boxShadow: SURFACE_SHADOW }}>
+      <div
+        data-calendar-static={entranceComplete || undefined}
+        className={cn(
+          "flex h-[calc(100vh-3rem)] min-h-0 flex-col overflow-hidden rounded-[24px] border-0 bg-white",
+        )}
+      >
       <div className="min-h-0 flex-1">
         {mounted ? (
           <IlamyCalendar
@@ -191,7 +190,7 @@ function CalendarPreviewImpl({
             }}
             onEventUpdate={handleEventUpdate}
             headerComponent={headerComponent}
-            headerClassName="px-8 py-4 border-b border-[#f4f4f4]"
+            headerClassName="px-8 py-4 border-0 shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.04)]"
             renderEvent={(event) => (
               <EventChip
                 event={event}
@@ -201,6 +200,7 @@ function CalendarPreviewImpl({
             )}
           />
         ) : null}
+      </div>
       </div>
     </div>
   );

@@ -54,7 +54,7 @@ export function PresetsMenu({ series, offsetMode, onApplyPreset }: PresetsMenuPr
           <DropdownMenuItem onSelect={() => setSaveOpen(true)}>Save preset</DropdownMenuItem>
           <DropdownMenuSeparator />
           {savedPresets.length === 0 ? (
-            <DropdownMenuItem disabled>No saved presets</DropdownMenuItem>
+            <DropdownMenuItem disabled>No saved presets yet</DropdownMenuItem>
           ) : (
             savedPresets.map((preset) => (
               <DropdownMenuItem key={preset.id} onSelect={() => handleApply(preset)}>

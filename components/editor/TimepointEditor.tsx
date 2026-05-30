@@ -13,6 +13,7 @@ import {
   effectiveRelativeToTimepointId,
   resolveSeriesDates,
 } from "@/lib/timepointMath";
+import { AvoidWeekendsButton } from "@/components/editor/AvoidWeekendsButton";
 import { TimepointRow } from "@/components/editor/TimepointRow";
 import { OffsetModeToggle } from "@/components/editor/OffsetModeToggle";
 import { PresetsMenu } from "@/components/presets/PresetsMenu";
@@ -20,12 +21,14 @@ import { buildIcs, triggerIcsDownload } from "@/lib/icsExport";
 import type { ProtocolPreset } from "@/lib/presets/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_EXPORT_DURATION_MINUTES = 30;
 type TimepointEditorProps = {
   series: Series | null;
   mode: OffsetMode;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  onScrollContainerScroll?: (scrollTop: number) => void;
   showTopBarFade?: boolean;
   highlightedTimepointId?: string | null;
   onModeChange: (mode: OffsetMode) => void;
@@ -43,12 +46,15 @@ type TimepointEditorProps = {
   onTimepointAbsoluteOffsetChange: (timepointId: string, minutesFromStart: number) => void;
   onTimepointRelativeReferenceChange: (timepointId: string, relativeToTimepointId: string | null) => void;
   onApplyPreset: (preset: ProtocolPreset) => void;
+  onApplyWeekendAvoidance?: (deltaDays: number) => void;
+  optimizePulseKey?: number;
 };
 
 export function TimepointEditor({
   series,
   mode,
   scrollContainerRef,
+  onScrollContainerScroll,
   showTopBarFade = false,
   highlightedTimepointId = null,
   onModeChange,
@@ -66,6 +72,8 @@ export function TimepointEditor({
   onTimepointAbsoluteOffsetChange,
   onTimepointRelativeReferenceChange,
   onApplyPreset,
+  onApplyWeekendAvoidance,
+  optimizePulseKey = 0,
 }: TimepointEditorProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [activeTimepointId, setActiveTimepointId] = useState<string | null>(null);
@@ -218,44 +226,51 @@ export function TimepointEditor({
   };
 
   return (
-    <div className="flex flex-col pb-8">
-        <div className="sticky top-0 z-10 relative flex flex-col gap-2 bg-background pb-4">
-          <div className="flex items-center gap-3">
-            <Input
-              ref={seriesNameInputRef}
-              value={series.name}
-              onChange={(event) => onSeriesNameChange(event.target.value)}
-              placeholder="Timeseries name"
-              aria-label="Timeseries name"
-              className="h-auto min-w-0 flex-1 border-0 bg-background px-1 py-0 text-[20px] font-medium text-[#161616]/70 shadow-none transition-colors duration-150 ease-[cubic-bezier(0.33,1,0.68,1)] hover:text-[#161616] focus:text-[#161616] focus-visible:ring-0 placeholder:text-[#a8adb5]/70 hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color_150ms_cubic-bezier(0.33,1,0.68,1)]"
-            />
-            <Button
-              type="button"
-              size="icon"
-              disabled={series.timepoints.length === 0}
-              onClick={() => {
-                const ics = buildIcs([series], DEFAULT_EXPORT_DURATION_MINUTES);
-                triggerIcsDownload(ics);
-              }}
-              aria-label="Export to calendar"
-              className="h-8 w-8 shrink-0 rounded-[12px] border-0 bg-[#f0f0eb] text-[#161616] shadow-none hover:bg-[#e8e8e4] hover:text-[#161616]"
-            >
-              <Download className="h-4 w-4 text-[#161616]" aria-hidden />
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <OffsetModeToggle value={mode} onChange={onModeChange} />
-            <PresetsMenu series={series} offsetMode={mode} onApplyPreset={onApplyPreset} />
-          </div>
-          {showTopBarFade && (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 -bottom-8 h-8 bg-gradient-to-b from-background to-transparent"
-            />
-          )}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div
+        className={cn(
+          "relative z-20 flex shrink-0 flex-col gap-2 bg-[#f9f9f7] px-3 pb-4",
+          showTopBarFade && "shadow-[0_4px_12px_-8px_rgba(0,0,0,0.1)]",
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <Input
+            ref={seriesNameInputRef}
+            value={series.name}
+            onChange={(event) => onSeriesNameChange(event.target.value)}
+            placeholder="Timeseries name"
+            aria-label="Timeseries name"
+            className="h-auto min-w-0 flex-1 border-0 bg-transparent px-1 py-0 text-[20px] font-medium text-[#161616]/70 shadow-none transition-colors duration-150 ease-[cubic-bezier(0.33,1,0.68,1)] hover:text-[#161616] focus:text-[#161616] focus-visible:ring-0 placeholder:text-[#a8adb5] hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color_150ms_cubic-bezier(0.33,1,0.68,1)]"
+          />
+          <Button
+            type="button"
+            size="icon"
+            disabled={series.timepoints.length === 0}
+            onClick={() => {
+              const ics = buildIcs([series], DEFAULT_EXPORT_DURATION_MINUTES);
+              triggerIcsDownload(ics);
+            }}
+            aria-label="Export to calendar"
+            className="h-8 w-8 shrink-0 rounded-[12px] border-0 bg-[#f0f0eb] text-[#161616] shadow-none hover:bg-[#e8e8e4] hover:text-[#161616]"
+          >
+            <Download className="h-4 w-4 text-[#161616]" aria-hidden />
+          </Button>
         </div>
 
+        <div className="flex items-center gap-1">
+          <OffsetModeToggle value={mode} onChange={onModeChange} />
+          <PresetsMenu series={series} offsetMode={mode} onApplyPreset={onApplyPreset} />
+          {onApplyWeekendAvoidance ? (
+            <AvoidWeekendsButton series={series} onApply={onApplyWeekendAvoidance} />
+          ) : null}
+        </div>
+      </div>
+
+      <div
+        ref={scrollContainerRef}
+        onScroll={(event) => onScrollContainerScroll?.(event.currentTarget.scrollTop)}
+        className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-3 pb-8 pt-3"
+      >
         <div className="flex flex-col gap-2">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={series.timepoints.map((timepoint) => timepoint.id)} strategy={verticalListSortingStrategy}>
@@ -285,7 +300,6 @@ export function TimepointEditor({
                 <TimepointRow
                   key={timepoint.id}
                   id={timepoint.id}
-                  index={index + 1}
                   name={timepoint.name}
                   description={timepoint.description}
                   hasScheduledTime={timepoint.hasScheduledTime === true}
@@ -326,6 +340,7 @@ export function TimepointEditor({
                   onNameFocusComplete={() => setNameFocusTimepointId(null)}
                   animateEnter={newlyAddedTimepointId === timepoint.id}
                   skipDescriptionEnterAnimation={descriptionEnterSkipId === timepoint.id}
+                  optimizePulseKey={optimizePulseKey}
                 />
                 );
               })}
@@ -351,6 +366,7 @@ export function TimepointEditor({
           </Button>
         </motion.div>
         </div>
+      </div>
     </div>
   );
 }

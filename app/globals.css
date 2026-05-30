@@ -115,6 +115,7 @@
     background-color: color-mix(in srgb, var(--event-accent) 22%, white);
     color: color-mix(in srgb, var(--event-accent) 70%, #000 30%);
     overflow: hidden;
+    box-shadow: var(--surface-edge-inset);
     transition: box-shadow 120ms ease-out, transform 120ms ease-out,
       background-color 120ms ease-out;
   }
@@ -156,6 +157,7 @@
   .calendar-event-chip--highlighted {
     background-color: color-mix(in srgb, var(--event-accent) 32%, white);
     box-shadow:
+      var(--surface-edge-inset),
       0 0 0 1px color-mix(in srgb, var(--event-accent) 60%, transparent),
       0 2px 6px rgba(16, 24, 40, 0.1);
   }
@@ -167,9 +169,7 @@
      left-border accent stays clipped; the shadow sits outside that clip. */
   [data-testid="ilamy-calendar"] .absolute:has(> .calendar-event-chip) {
     border-radius: 2px;
-    box-shadow:
-      0 1px 2px rgba(16, 24, 40, 0.06),
-      0 2px 6px rgba(16, 24, 40, 0.08);
+    box-shadow: var(--surface-edge-outer);
   }
 
   /* The per-column events overlay ilamy renders has `overflow-clip`, which
@@ -189,6 +189,7 @@
   [data-testid="ilamy-calendar"] [data-testid^="horizontal-event-"] {
     border-radius: 3px;
     overflow: hidden;
+    box-shadow: var(--surface-edge-outer);
   }
 
   [data-testid="ilamy-calendar"] [data-testid^="horizontal-event-"] > .shadow {
@@ -222,6 +223,8 @@
      override the token to pure white so those areas don't pick up the page's slightly
      tinted `--background` and read as gray next to the white card. */
   [data-testid="ilamy-calendar"] {
+    --surface-edge-inset: inset 0 0 0 1px #ffffff;
+    --surface-edge-outer: 0 0 0 1px rgba(0, 0, 0, 0.04);
     --ilamy-grid-line: #f4f3f0;
     --color-background: #ffffff;
     --background: #ffffff;

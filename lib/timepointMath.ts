@@ -1,4 +1,5 @@
-import { addMinutes, differenceInCalendarDays, format } from "date-fns";
+import { addDays, addMinutes, differenceInCalendarDays, format, getDay } from "date-fns";
+import { DEFAULT_ANCHOR_NAME } from "@/lib/types";
 import { RELATIVE_TO_PREVIOUS, type Offset, type OffsetMode, type Series, type Timepoint } from "@/lib/types";
 
 export const MINUTES_IN_DAY = 24 * 60;
@@ -118,6 +119,103 @@ export function isDefaultRelativeReference(
   referenceId: string,
 ): boolean {
   return referenceId === defaultRelativeToTimepointId(series, index, mode);
+}
+
+export function isWeekend(date: Date): boolean {
+  const day = getDay(date);
+  return day === 0 || day === 6;
+}
+
+export function hasWeekendTimepoints(series: Series): boolean {
+  return resolveSeriesDates(series).some((timepoint) => isWeekend(timepoint.resolvedAt));
+}
+
+/** True once a third timepoint exists and at least one resolved event lands on a weekend. */
+export function shouldOfferWeekendAvoidance(series: Series): boolean {
+  return series.timepoints.length >= 3 && hasWeekendTimepoints(series);
+}
+
+/** Smallest calendar-day shift (-14…+14) so every resolved timepoint lands on a weekday. */
+export function computeShiftToAvoidWeekends(series: Series): number {
+  const resolved = resolveSeriesDates(series);
+  if (resolved.length === 0) {
+    return 0;
+  }
+
+  const isClear = (deltaDays: number) =>
+    resolved.every((timepoint) => !isWeekend(addDays(timepoint.resolvedAt, deltaDays)));
+
+  if (isClear(0)) {
+    return 0;
+  }
+
+  for (let magnitude = 1; magnitude <= 14; magnitude += 1) {
+    if (isClear(magnitude)) {
+      return magnitude;
+    }
+    if (isClear(-magnitude)) {
+      return -magnitude;
+    }
+  }
+
+  return 0;
+}
+
+export function optimizeSeriesAvoidWeekends(series: Series): Series {
+  const deltaDays = computeShiftToAvoidWeekends(series);
+  return shiftSeriesByCalendarDays(series, deltaDays);
+}
+
+export type WeekendAvoidanceSuggestion = {
+  deltaDays: number;
+  currentAnchor: Date;
+  suggestedAnchor: Date;
+  /** Resolved timepoints that currently fall on a weekend. */
+  affectedTimepoints: Array<{
+    label: string;
+    from: Date;
+    to: Date;
+  }>;
+};
+
+export function buildWeekendAvoidanceSuggestion(series: Series): WeekendAvoidanceSuggestion | null {
+  const deltaDays = computeShiftToAvoidWeekends(series);
+  if (deltaDays === 0) {
+    return null;
+  }
+
+  const currentAnchor = new Date(series.anchorAt);
+  const suggestedAnchor = addDays(currentAnchor, deltaDays);
+  const affectedTimepoints = resolveSeriesDates(series)
+    .map((timepoint, index) => ({ timepoint, index }))
+    .filter(({ timepoint }) => isWeekend(timepoint.resolvedAt))
+    .map(({ timepoint, index }) => ({
+      label:
+        timepoint.name.trim() ||
+        (index === 0 ? DEFAULT_ANCHOR_NAME : `Timepoint ${index + 1}`),
+      from: timepoint.resolvedAt,
+      to: addDays(timepoint.resolvedAt, deltaDays),
+    }));
+
+  return {
+    deltaDays,
+    currentAnchor,
+    suggestedAnchor,
+    affectedTimepoints,
+  };
+}
+
+export function formatWeekendAvoidanceHeadline(suggestedAnchor: Date): string {
+  return `Starting on ${format(suggestedAnchor, "EEEE, MMM d")} avoids weekends`;
+}
+
+export function formatWeekendShiftSummary(deltaDays: number): string {
+  const magnitude = Math.abs(deltaDays);
+  const unit = magnitude === 1 ? "day" : "days";
+  if (deltaDays > 0) {
+    return `Shifts every event forward ${magnitude} ${unit}`;
+  }
+  return `Shifts every event back ${magnitude} ${unit}`;
 }
 
 export function shiftSeriesByCalendarDays(series: Series, deltaDays: number): Series {

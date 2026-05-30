@@ -10,6 +10,7 @@ import { BOOTSTRAP_SERIES_ID, initialState, nowAnchorIso, seriesReducer } from "
 export function TimepointCalendarApp() {
   const [state, dispatch] = useReducer(seriesReducer, initialState);
   const [highlightedTimepointId, setHighlightedTimepointId] = useState<string | null>(null);
+  const [optimizePulseKey, setOptimizePulseKey] = useState(0);
   const [isEditorScrolled, setIsEditorScrolled] = useState(false);
   const editorScrollRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +38,17 @@ export function TimepointCalendarApp() {
     dispatch({ type: "shift-series-days", seriesId, deltaDays });
   }, []);
 
+  const handleApplyWeekendAvoidance = useCallback(
+    (deltaDays: number) => {
+      if (!activeSeries || deltaDays === 0) {
+        return;
+      }
+      dispatch({ type: "shift-series-days", seriesId: activeSeries.id, deltaDays });
+      setOptimizePulseKey((key) => key + 1);
+    },
+    [activeSeries],
+  );
+
   return (
     <main className="min-h-screen bg-background p-4 md:p-6 lg:h-screen lg:overflow-hidden lg:pb-0">
       <div className="h-full w-full">
@@ -49,15 +61,12 @@ export function TimepointCalendarApp() {
           </div>
         ) : (
           <div className="grid h-full gap-x-6 gap-y-0 lg:h-[calc(100vh-1.5rem)] lg:grid-cols-[460px_1fr] lg:grid-rows-1">
-            <div
-              ref={editorScrollRef}
-              className="scrollbar-thin min-h-0 overflow-y-auto"
-              onScroll={(event) => setIsEditorScrolled(event.currentTarget.scrollTop > 6)}
-            >
+            <div className="flex min-h-0 flex-col">
             <TimepointEditor
               series={activeSeries}
               mode={state.offsetMode}
               scrollContainerRef={editorScrollRef}
+              onScrollContainerScroll={(scrollTop) => setIsEditorScrolled(scrollTop > 6)}
               showTopBarFade={isEditorScrolled}
               highlightedTimepointId={highlightedTimepointId}
               onModeChange={(mode) => dispatch({ type: "set-offset-mode", mode })}
@@ -167,6 +176,8 @@ export function TimepointCalendarApp() {
                   seriesId: activeSeries.id,
                 });
               }}
+              onApplyWeekendAvoidance={handleApplyWeekendAvoidance}
+              optimizePulseKey={optimizePulseKey}
             />
             </div>
             <div className="min-h-0 lg:sticky lg:top-0 lg:self-start">

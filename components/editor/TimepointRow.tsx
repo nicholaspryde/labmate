@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn, HIGHLIGHTED_SURFACE_SHADOW, SURFACE_SHADOW } from "@/lib/utils";
 
 function formatRelativeReferenceReadout(
   relativeToMode: "default" | "previous" | "specific",
@@ -185,6 +185,11 @@ const fieldRevealTransition = {
   opacity: fieldRevealOpacityTransition,
 };
 
+const optimizeValueTransition = {
+  duration: 0.32,
+  ease: [0.33, 1, 0.68, 1] as const,
+};
+
 function closestTimeSlotValue(reference = new Date()): string {
   const totalMinutes = reference.getHours() * 60 + reference.getMinutes();
   const roundedMinutes = Math.min(23 * 60 + 30, Math.round(totalMinutes / 30) * 30);
@@ -260,7 +265,6 @@ type RelativeReferenceOption = {
 
 type TimepointRowProps = {
   id: string;
-  index: number;
   name: string;
   description: string;
   hasScheduledTime: boolean;
@@ -290,11 +294,11 @@ type TimepointRowProps = {
   onNameFocusComplete?: () => void;
   animateEnter?: boolean;
   skipDescriptionEnterAnimation?: boolean;
+  optimizePulseKey?: number;
 };
 
 export function TimepointRow({
   id,
-  index,
   name,
   description,
   hasScheduledTime,
@@ -324,6 +328,7 @@ export function TimepointRow({
   onNameFocusComplete,
   animateEnter = false,
   skipDescriptionEnterAnimation = false,
+  optimizePulseKey = 0,
 }: TimepointRowProps) {
   const shouldReduceMotion = useReducedMotion();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -334,8 +339,6 @@ export function TimepointRow({
     transform: CSS.Transform.toString(transform),
     transition,
   };
-  const cardShadow =
-    "0px 0px 6px rgba(0, 0, 0, 0.02), 0px 1px 2px rgba(0, 0, 0, 0.08)";
   const [showDescriptionInput, setShowDescriptionInput] = useState(Boolean(description.trim()));
   const [timeEntryActive, setTimeEntryActive] = useState(hasScheduledTime);
   const [startTimeInput, setStartTimeInput] = useState("");
@@ -348,6 +351,17 @@ export function TimepointRow({
   const endTimeInputRef = useRef<HTMLInputElement>(null);
   const skipNextStartTimeBlurApplyRef = useRef(false);
   const skipNextEndTimeBlurApplyRef = useRef(false);
+  const timeBlurCancelTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeEntryCancelStateRef = useRef({
+    hasScheduledTime,
+    startTimeInput,
+    endTimeInput,
+  });
+  timeEntryCancelStateRef.current = {
+    hasScheduledTime,
+    startTimeInput,
+    endTimeInput,
+  };
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
   const [relativeOffsetAnchorEl, setRelativeOffsetAnchorEl] = useState<HTMLDivElement | null>(null);
   const [startTimeAnchorEl, setStartTimeAnchorEl] = useState<HTMLDivElement | null>(null);
@@ -361,6 +375,8 @@ export function TimepointRow({
   const [relativeToPickerAnchorEl, setRelativeToPickerAnchorEl] = useState<HTMLButtonElement | null>(null);
   const relativeToPickerPanelRef = useRef<HTMLDivElement>(null);
   const relativeToSpecificPanelRef = useRef<HTMLDivElement>(null);
+  const prevOptimizePulseKeyRef = useRef(optimizePulseKey);
+  const [relativeDatesPulseActive, setRelativeDatesPulseActive] = useState(false);
   const isCustomMode = mode === "custom";
   const inlineReferenceLabel = formatRelativeReferenceReadout(relativeToMode, relativeReferenceLabel);
   const relativeSuggestions = [
@@ -381,6 +397,15 @@ export function TimepointRow({
       setShowDescriptionInput(true);
     }
   }, [description]);
+
+  useEffect(() => {
+    if (optimizePulseKey > prevOptimizePulseKeyRef.current) {
+      prevOptimizePulseKeyRef.current = optimizePulseKey;
+      if (!shouldReduceMotion) {
+        setRelativeDatesPulseActive(true);
+      }
+    }
+  }, [optimizePulseKey, shouldReduceMotion]);
 
   const closeRelativeToPicker = () => {
     setRelativeToPickerOpen(false);
@@ -516,14 +541,40 @@ export function TimepointRow({
     setDatePickerOpen(false);
   };
 
+  const clearTimeBlurCancelTimeout = () => {
+    if (timeBlurCancelTimeoutRef.current !== null) {
+      clearTimeout(timeBlurCancelTimeoutRef.current);
+      timeBlurCancelTimeoutRef.current = null;
+    }
+  };
+
+  const scheduleTimeBlurCancel = (which: "start" | "end") => {
+    clearTimeBlurCancelTimeout();
+    timeBlurCancelTimeoutRef.current = setTimeout(() => {
+      timeBlurCancelTimeoutRef.current = null;
+      if (which === "start") {
+        setStartSuggestionsOpen(false);
+      } else {
+        setEndSuggestionsOpen(false);
+      }
+      cancelTimeEntryIfEmpty();
+    }, 120);
+  };
+
   const commitStartTime = (hour: number, minute: number) => {
     const next = new Date(resolvedAt);
     next.setHours(hour, minute, 0, 0);
     onDateTimeChange(next);
     onScheduledTimeChange(true);
     setStartTimeInput(formatTimeLabel(resolvedAt, hour, minute));
+    timeEntryCancelStateRef.current = {
+      hasScheduledTime: true,
+      startTimeInput: formatTimeLabel(resolvedAt, hour, minute),
+      endTimeInput: timeEntryCancelStateRef.current.endTimeInput,
+    };
     setTimeInputError(null);
     setStartSuggestionsOpen(false);
+    clearTimeBlurCancelTimeout();
     skipNextStartTimeBlurApplyRef.current = true;
     startTimeInputRef.current?.blur();
   };
@@ -532,8 +583,14 @@ export function TimepointRow({
     onDurationChange(durationFromEndTime(resolvedAt, hour, minute));
     onScheduledTimeChange(true);
     setEndTimeInput(formatTimeLabel(resolvedAt, hour, minute));
+    timeEntryCancelStateRef.current = {
+      hasScheduledTime: true,
+      startTimeInput: timeEntryCancelStateRef.current.startTimeInput,
+      endTimeInput: formatTimeLabel(resolvedAt, hour, minute),
+    };
     setTimeInputError(null);
     setEndSuggestionsOpen(false);
+    clearTimeBlurCancelTimeout();
     skipNextEndTimeBlurApplyRef.current = true;
     endTimeInputRef.current?.blur();
   };
@@ -582,10 +639,15 @@ export function TimepointRow({
   };
 
   const cancelTimeEntryIfEmpty = () => {
-    if (hasScheduledTime) {
+    const {
+      hasScheduledTime: scheduled,
+      startTimeInput: start,
+      endTimeInput: end,
+    } = timeEntryCancelStateRef.current;
+    if (scheduled) {
       return;
     }
-    if (startTimeInput.trim() || endTimeInput.trim()) {
+    if (start.trim() || end.trim()) {
       return;
     }
 
@@ -629,26 +691,27 @@ export function TimepointRow({
     <div
       ref={setNodeRef}
       style={dragStyle}
-      className={cn(isDragging && "opacity-50", "scroll-mt-28")}
+      className={cn("scroll-mt-28", isDragging && "opacity-50")}
       onClick={onFocus}
       data-timepoint-row
       data-timepoint-id={id}
     >
+      <div
+        className="rounded-[8px] bg-white"
+        style={{ boxShadow: isHighlighted ? HIGHLIGHTED_SURFACE_SHADOW : SURFACE_SHADOW }}
+        data-highlighted={isHighlighted || undefined}
+      >
+        <div className="timepoint-event-card group relative overflow-hidden rounded-[8px] border-0 p-3 transition-colors duration-150">
       <motion.div
-        className={cn(
-          "group relative rounded-[8px] border-0 bg-white p-3 transition-colors duration-150",
-        )}
-        style={{ boxShadow: cardShadow }}
         initial={
           animateEnter && !shouldReduceMotion
-            ? { opacity: 0, y: 6, filter: "blur(3px)" }
+            ? { opacity: 0, y: 6 }
             : false
         }
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{
           y: { type: "spring", visualDuration: 0.42, bounce: 0 },
           opacity: { type: "spring", visualDuration: 0.38, bounce: 0 },
-          filter: { duration: 0.24, ease: [0.33, 1, 0.68, 1] },
         }}
       >
         {onDelete && (
@@ -663,32 +726,39 @@ export function TimepointRow({
             </svg>
           </button>
         )}
-        <div
-          className={cn(
-            "absolute right-3 top-3 z-10 flex h-6 w-6 shrink-0 items-center justify-center text-[11px] font-medium tabular-nums text-[#a8adb5] transition-opacity duration-150",
-            onDelete && "group-hover:pointer-events-none group-hover:opacity-0",
-            !isAnchor && "cursor-grab",
-          )}
-          {...(!isAnchor ? attributes : {})}
-          {...(!isAnchor ? listeners : {})}
-        >
-          {index}
-        </div>
+        {!isAnchor && (
+          <div
+            aria-label="Drag to reorder"
+            className="absolute right-3 top-3 z-10 h-6 w-6 shrink-0 cursor-grab"
+            {...attributes}
+            {...listeners}
+          />
+        )}
 
-        <div className="min-w-0 space-y-0 pr-10">
+        <div className={cn("min-w-0 space-y-0", !isAnchor && "pr-10")}>
           <Input
             ref={nameInputRef}
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
-            placeholder="Add event name"
-            className="h-8 min-w-0 w-full border-0 bg-transparent px-1 py-0 text-[15px] font-medium text-[#161616]/70 shadow-none transition-colors duration-150 ease-[cubic-bezier(0.33,1,0.68,1)] hover:text-[#161616] focus:text-[#161616] focus-visible:ring-0 placeholder:text-[#a8adb5]/70 hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color_150ms_cubic-bezier(0.33,1,0.68,1)]"
+            placeholder={isAnchor ? "Add first event name" : "Add event name"}
+            className="h-8 min-w-0 w-full border-0 bg-transparent px-1 py-0 text-[15px] font-normal text-[#161616]/70 shadow-none transition-colors duration-150 ease-[cubic-bezier(0.33,1,0.68,1)] hover:text-[#161616] focus:text-[#161616] focus-visible:ring-0 placeholder:text-[#a8adb5] hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color_150ms_cubic-bezier(0.33,1,0.68,1)]"
             onFocus={onFocus}
-            aria-label="Add event name"
+            aria-label={isAnchor ? "Add first event name" : "Add event name"}
           />
 
           <div className="flex flex-col gap-0 pr-3 pb-0 pt-[0px]">
             {!isAnchor && (
-            <div className="flex items-start">
+            <motion.div
+              className="flex items-start"
+              initial={false}
+              animate={
+                relativeDatesPulseActive && !shouldReduceMotion
+                  ? { opacity: [1, 0.55, 1] }
+                  : { opacity: 1 }
+              }
+              transition={optimizeValueTransition}
+              onAnimationComplete={() => setRelativeDatesPulseActive(false)}
+            >
               <Plus className="h-3.5 w-3.5 shrink-0 mr-[9px] mt-[9px] text-[#a8adb5]" aria-hidden />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center text-[14px] font-normal text-[#161616]">
@@ -895,7 +965,7 @@ export function TimepointRow({
                         setRelativeSuggestionsOpen(true);
                       }}
                       className={cn(
-                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-0 py-0 text-left text-[14px] font-normal shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
+                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-0 py-0 text-left text-[13px] font-normal shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
                         relativeSuggestionsOpen && "bg-[#f4f4f0]",
                       )}
                       aria-label="Relative offset"
@@ -928,43 +998,63 @@ export function TimepointRow({
                   <p className="text-xs text-red-600">{relativeOffsetError}</p>
                 )}
               </div>
-            </div>
+            </motion.div>
             )}
             <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-0 text-sm font-normal" onClick={(event) => event.stopPropagation()}>
+            <div className="flex min-h-8 flex-nowrap items-center gap-0 text-sm font-normal" onClick={(event) => event.stopPropagation()}>
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
                     variant="ghost"
                     className={cn(
-                      "h-8 w-fit justify-start border-0 bg-transparent pl-1 pr-1 py-0 text-[14px] font-normal shadow-none hover:bg-[#f0f0eb]",
+                      "h-8 w-fit shrink-0 justify-start whitespace-nowrap border-0 bg-transparent pl-1 pr-1 py-0 text-[13px] font-normal shadow-none hover:bg-[#f0f0eb]",
                       "text-[#161616]",
                     )}
                     aria-label="Choose event day"
                   >
-                    {formattedDateLabel}
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.span
+                        key={`${optimizePulseKey}-${formattedDateLabel}`}
+                        initial={
+                          shouldReduceMotion || optimizePulseKey === 0
+                            ? false
+                            : { opacity: 0.45, y: 2 }
+                        }
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -2 }}
+                        transition={optimizeValueTransition}
+                        className="inline-block"
+                      >
+                        {formattedDateLabel}
+                      </motion.span>
+                    </AnimatePresence>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start" collisionPadding={8}>
+                <PopoverContent
+                  className="w-auto overflow-hidden rounded-[12px] !bg-white p-0"
+                  align="start"
+                  collisionPadding={8}
+                >
                   <Calendar
                     mode="single"
                     selected={resolvedAt}
                     defaultMonth={resolvedAt}
                     onSelect={handleCalendarDateSelect}
+                    className="bg-white"
                   />
                 </PopoverContent>
               </Popover>
+              <div className="inline-flex h-8 shrink-0 items-center">
               <AnimatePresence initial={false} mode="popLayout">
                 {timeEntryActive ? (
                   <motion.div
                     key="time-inputs"
-                    className="group/time flex items-center"
-                    initial={shouldReduceMotion ? false : { opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: "auto" }}
-                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
-                    transition={fieldRevealTransition}
-                    style={{ overflow: "hidden" }}
+                    className="group/time inline-flex items-center whitespace-nowrap"
+                    initial={shouldReduceMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0 }}
+                    transition={fieldRevealOpacityTransition}
                   >
                   <span className="px-1 text-[14px] text-[#d4d4d0]">|</span>
                   <div ref={setStartTimeAnchorEl} className="relative h-8 w-fit">
@@ -986,16 +1076,14 @@ export function TimepointRow({
                         } else {
                           applyStartTimeInput();
                         }
-                        setTimeout(() => {
-                          setStartSuggestionsOpen(false);
-                          cancelTimeEntryIfEmpty();
-                        }, 120);
+                        scheduleTimeBlurCancel("start");
                       }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
                           event.preventDefault();
                           applyStartTimeInput();
                           setStartSuggestionsOpen(false);
+                          clearTimeBlurCancelTimeout();
                           skipNextStartTimeBlurApplyRef.current = true;
                           startTimeInputRef.current?.blur();
                         }
@@ -1077,16 +1165,14 @@ export function TimepointRow({
                         } else {
                           applyEndTimeInput();
                         }
-                        setTimeout(() => {
-                          setEndSuggestionsOpen(false);
-                          cancelTimeEntryIfEmpty();
-                        }, 120);
+                        scheduleTimeBlurCancel("end");
                       }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
                           event.preventDefault();
                           applyEndTimeInput();
                           setEndSuggestionsOpen(false);
+                          clearTimeBlurCancelTimeout();
                           skipNextEndTimeBlurApplyRef.current = true;
                           endTimeInputRef.current?.blur();
                         }
@@ -1168,15 +1254,14 @@ export function TimepointRow({
                 ) : (
                   <motion.div
                     key="time-trigger"
-                    initial={shouldReduceMotion ? false : { opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: "auto" }}
-                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
-                    transition={fieldRevealTransition}
-                    style={{ overflow: "hidden" }}
+                    initial={shouldReduceMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0 }}
+                    transition={fieldRevealOpacityTransition}
                   >
                 <button
                   type="button"
-                  className="inline-flex h-8 items-center bg-transparent px-2 text-[12px] font-medium text-[#a8adb5] hover:text-[#8f959e]"
+                  className="inline-flex h-8 shrink-0 items-center whitespace-nowrap bg-transparent px-2 text-[12px] font-medium text-[#a8adb5] hover:text-[#8f959e]"
                   onClick={(event) => {
                     event.stopPropagation();
                     setTimeEntryActive(true);
@@ -1191,6 +1276,7 @@ export function TimepointRow({
                   </motion.div>
                 )}
               </AnimatePresence>
+              </div>
             </div>
                 {isActive && timeInputError && (
                   <p className="text-xs text-red-600">{timeInputError}</p>
@@ -1215,7 +1301,7 @@ export function TimepointRow({
                       {!showDescriptionInput ? (
                         <button
                           type="button"
-                          className="inline-flex h-8 min-w-0 flex-1 items-center bg-transparent px-1 text-left text-[14px] font-normal text-[#a8adb5] hover:text-[#8f959e]"
+                          className="inline-flex h-8 min-w-0 flex-1 items-center bg-transparent px-1 text-left text-[13px] font-normal text-[#a8adb5] hover:text-[#8f959e]"
                           onClick={(event) => {
                             event.stopPropagation();
                             setShowDescriptionInput(true);
@@ -1232,7 +1318,7 @@ export function TimepointRow({
                           value={description}
                           placeholder="Add description"
                           rows={1}
-                          className="block min-h-8 min-w-0 flex-1 resize-none border-0 bg-transparent px-0 pr-2 py-[6px] text-sm font-normal leading-5 text-[#161616] shadow-none outline-none placeholder:text-[#a8adb5] focus-visible:ring-0 [field-sizing:content]"
+                          className="mx-1 block min-h-8 min-w-0 flex-1 resize-none border-0 bg-transparent px-0 pr-2 py-[6px] text-sm font-normal leading-5 text-[#161616] shadow-none outline-none placeholder:text-[#a8adb5] focus-visible:ring-0 [field-sizing:content]"
                           onClick={(event) => event.stopPropagation()}
                           onChange={(event) => onDescriptionChange(event.target.value)}
                           onBlur={() => {
@@ -1253,6 +1339,8 @@ export function TimepointRow({
           </div>
         </div>
       </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

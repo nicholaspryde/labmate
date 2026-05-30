@@ -63,12 +63,12 @@ export function CalendarHeader() {
 
       <h2
         className={cn(
-          "pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[20px] font-semibold leading-normal text-[#161616]",
+          "pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[16px] font-medium leading-normal text-[#161616]",
         )}
         style={{ letterSpacing: "-0.24px" }}
       >
         {monthLabel}{" "}
-        <span className="font-normal">{yearLabel}</span>
+        <span>{yearLabel}</span>
       </h2>
 
       <Select

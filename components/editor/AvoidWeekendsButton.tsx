@@ -1,0 +1,76 @@
+"use client";
+
+import { Sparkles } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useMemo } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  buildWeekendAvoidanceSuggestion,
+  shouldOfferWeekendAvoidance,
+} from "@/lib/timepointMath";
+import type { Series } from "@/lib/types";
+
+type AvoidWeekendsButtonProps = {
+  series: Series;
+  onApply: (deltaDays: number) => void;
+};
+
+const optimizeRevealTransition = {
+  duration: 0.2,
+  ease: [0.33, 1, 0.68, 1] as const,
+};
+
+function formatOptimizeToast(deltaDays: number): string {
+  const magnitude = Math.abs(deltaDays);
+  const unit = magnitude === 1 ? "day" : "days";
+  const direction = deltaDays > 0 ? "forward" : "back";
+  return `Shifted events ${direction} ${magnitude} ${unit}`;
+}
+
+export function AvoidWeekendsButton({ series, onApply }: AvoidWeekendsButtonProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const canOptimize = shouldOfferWeekendAvoidance(series);
+  const suggestion = useMemo(
+    () => (canOptimize ? buildWeekendAvoidanceSuggestion(series) : null),
+    [canOptimize, series],
+  );
+
+  const handleOptimize = () => {
+    if (!suggestion) {
+      toast.error("Couldn't avoid weekends");
+      return;
+    }
+
+    onApply(suggestion.deltaDays);
+    toast(formatOptimizeToast(suggestion.deltaDays));
+  };
+
+  return (
+    <AnimatePresence initial={false} mode="popLayout">
+      {canOptimize ? (
+        <motion.div
+          key="optimize-button"
+          layout
+          initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96, x: 6 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, x: 6 }}
+          transition={optimizeRevealTransition}
+          className="ml-auto"
+        >
+          <Button
+            type="button"
+            variant="toolbar"
+            aria-label="Optimize"
+            title="Shift dates to avoid weekends"
+            className="gap-1.5"
+            onClick={handleOptimize}
+          >
+            <Sparkles className="h-3 w-3 shrink-0" aria-hidden />
+            Optimize
+          </Button>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}

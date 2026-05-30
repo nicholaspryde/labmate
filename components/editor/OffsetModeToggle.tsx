@@ -80,8 +80,8 @@ export function OffsetModeToggle({ value, onChange }: OffsetModeToggleProps) {
               >
                 <span
                   className={cn(
-                    "text-[13px] font-semibold leading-snug",
-                    isSelected ? "text-[#4c69b3]" : "text-[#161616]",
+                    "text-[13px] font-medium leading-snug",
+                    isSelected ? "text-[#082872]" : "text-[#161616]",
                   )}
                 >
                   {option.label}
@@ -89,7 +89,7 @@ export function OffsetModeToggle({ value, onChange }: OffsetModeToggleProps) {
                 <span
                   className={cn(
                     "mt-0.5 text-[12px] leading-snug",
-                    isSelected ? "text-[#4c69b3]" : "text-[#6b6b74]",
+                    isSelected ? "text-[#082872]" : "text-[#6b6b74]",
                   )}
                 >
                   {option.description}
