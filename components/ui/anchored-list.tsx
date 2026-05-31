@@ -4,6 +4,8 @@ import { useCallback, useLayoutEffect, useRef, useState, type Ref } from "react"
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
+type AnchoredListPlacement = "below" | "right";
+
 type AnchoredListProps = {
   open: boolean;
   anchorEl: HTMLElement | null;
@@ -11,6 +13,8 @@ type AnchoredListProps = {
   className?: string;
   width?: number;
   xOffset?: number;
+  /** Where to place the panel relative to the anchor. Defaults to `"below"`. */
+  placement?: AnchoredListPlacement;
   initialScrollToValue?: string;
   /** Receives the portaled panel root for click-outside / focus guards. */
   panelRef?: Ref<HTMLDivElement>;
@@ -30,14 +34,39 @@ function computeAnchoredPosition({
   panelWidth,
   panelHeight,
   xOffset,
+  placement,
 }: {
   anchorRect: DOMRect;
   panelWidth: number;
   panelHeight: number;
   xOffset: number;
+  placement: AnchoredListPlacement;
 }): { top: number; left: number } {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
+
+  if (placement === "right") {
+    let left = anchorRect.right + ANCHOR_GAP + xOffset;
+    if (left + panelWidth > viewportWidth - VIEWPORT_PADDING) {
+      const flippedLeft = anchorRect.left - panelWidth - ANCHOR_GAP - xOffset;
+      if (flippedLeft >= VIEWPORT_PADDING) {
+        left = flippedLeft;
+      }
+    }
+
+    left = Math.max(
+      VIEWPORT_PADDING,
+      Math.min(left, viewportWidth - panelWidth - VIEWPORT_PADDING),
+    );
+
+    let top = anchorRect.top;
+    top = Math.max(
+      VIEWPORT_PADDING,
+      Math.min(top, viewportHeight - panelHeight - VIEWPORT_PADDING),
+    );
+
+    return { top, left };
+  }
 
   const spaceBelow = viewportHeight - anchorRect.bottom - ANCHOR_GAP - VIEWPORT_PADDING;
   const spaceAbove = anchorRect.top - ANCHOR_GAP - VIEWPORT_PADDING;
@@ -82,6 +111,7 @@ export function AnchoredList({
   className,
   width = 208,
   xOffset = 0,
+  placement = "below",
   initialScrollToValue,
   panelRef,
 }: AnchoredListProps) {
@@ -116,6 +146,7 @@ export function AnchoredList({
         panelWidth: width,
         panelHeight,
         xOffset,
+        placement,
       });
       setPosition((prev) => (positionsEqual(prev, next) ? prev : next));
     };
@@ -151,7 +182,7 @@ export function AnchoredList({
       window.removeEventListener("resize", updatePosition);
       resizeObserver?.disconnect();
     };
-  }, [open, anchorEl, xOffset, width, children]);
+  }, [open, anchorEl, xOffset, width, placement, children]);
 
   useLayoutEffect(() => {
     if (!open) {

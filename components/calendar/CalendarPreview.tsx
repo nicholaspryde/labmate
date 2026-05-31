@@ -12,12 +12,20 @@ import { formatCalendarPreviewLabel, type CalendarEventData } from "@/lib/calend
 import { dayDeltaFromDates } from "@/lib/timepointMath";
 import { cn, SURFACE_SHADOW } from "@/lib/utils";
 
+export type CalendarEventDayChange = {
+  seriesId: string;
+  timepointId: string;
+  isAnchor: boolean;
+  newStart: Date;
+  deltaDays: number;
+};
+
 type CalendarPreviewProps = {
   events: Parameters<typeof IlamyCalendar>[0]["events"];
   focusDate: string | null;
   highlightedTimepointId: string | null;
   onHoverTimepoint: (timepointId: string | null) => void;
-  onShiftSeriesDays: (seriesId: string, deltaDays: number) => void;
+  onEventDayChange: (change: CalendarEventDayChange) => void;
 };
 
 const DEFAULT_ACCENT = "#6c96ff";
@@ -52,7 +60,7 @@ type EventChipProps = {
 function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChipProps) {
   const { view } = useIlamyCalendarContext();
   const eventData = event.data as CalendarEventData | undefined;
-  const accent = event.color || event.backgroundColor || DEFAULT_ACCENT;
+  const accent = eventData?.accentColor ?? DEFAULT_ACCENT;
   const chipStyle: CSSProperties & Record<"--event-accent", string> = {
     "--event-accent": accent,
   };
@@ -114,11 +122,13 @@ function CalendarPreviewImpl({
   focusDate,
   highlightedTimepointId,
   onHoverTimepoint,
-  onShiftSeriesDays,
+  onEventDayChange,
 }: CalendarPreviewProps) {
   const [mounted, setMounted] = useState(false);
   const [entranceComplete, setEntranceComplete] = useState(false);
+  const calendarShellRef = useRef<HTMLDivElement>(null);
   const eventStartsRef = useRef<Map<string, Date>>(new Map());
+  const isCalendarEventDragRef = useRef(false);
   const initialDateRef = useRef(focusDate);
 
   useEffect(() => {
@@ -142,17 +152,97 @@ function CalendarPreviewImpl({
     eventStartsRef.current = starts;
   }, [events]);
 
-  const handleEventUpdate = (updatedEvent: CalendarEvent) => {
-    const oldStart = eventStartsRef.current.get(String(updatedEvent.id));
-    const seriesId = (updatedEvent.data as CalendarEventData | undefined)?.seriesId;
-    if (!oldStart || !seriesId) {
+  useEffect(() => {
+    const shell = calendarShellRef.current;
+    if (!shell) {
       return;
     }
 
-    const delta = dayDeltaFromDates(oldStart, updatedEvent.start.toDate());
-    if (delta !== 0) {
-      onShiftSeriesDays(seriesId, delta);
+    const setDragAccent = (accent: string) => {
+      shell.style.setProperty("--calendar-drag-accent", accent);
+    };
+
+    const clearDragAccent = () => {
+      shell.style.removeProperty("--calendar-drag-accent");
+    };
+
+    const suppressDragDropAnimation = () => {
+      const calendar = shell.querySelector('[data-testid="ilamy-calendar"]');
+      if (!calendar) {
+        return;
+      }
+
+      for (const preview of calendar.querySelectorAll("div.bg-amber-200")) {
+        let node: HTMLElement | null = preview;
+        while (node && node !== calendar) {
+          if (getComputedStyle(node).position === "fixed") {
+            for (const animation of node.getAnimations()) {
+              animation.cancel();
+            }
+            node.style.visibility = "hidden";
+            break;
+          }
+          node = node.parentElement;
+        }
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const chip = (event.target as HTMLElement | null)?.closest(".calendar-event-chip");
+      if (!chip) {
+        return;
+      }
+      isCalendarEventDragRef.current = true;
+      const accent = getComputedStyle(chip).getPropertyValue("--event-accent").trim();
+      if (accent) {
+        setDragAccent(accent);
+      }
+    };
+
+    const handlePointerUp = () => {
+      clearDragAccent();
+      if (!isCalendarEventDragRef.current) {
+        return;
+      }
+      isCalendarEventDragRef.current = false;
+      suppressDragDropAnimation();
+      requestAnimationFrame(suppressDragDropAnimation);
+    };
+
+    shell.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("pointerup", handlePointerUp);
+    document.addEventListener("pointercancel", handlePointerUp);
+
+    return () => {
+      shell.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("pointerup", handlePointerUp);
+      document.removeEventListener("pointercancel", handlePointerUp);
+      clearDragAccent();
+    };
+  }, [mounted]);
+
+  const handleEventUpdate = (updatedEvent: CalendarEvent) => {
+    const oldStart = eventStartsRef.current.get(String(updatedEvent.id));
+    const eventData = updatedEvent.data as CalendarEventData | undefined;
+    const seriesId = eventData?.seriesId;
+    const timepointId = eventData?.timepointId;
+    if (!oldStart || !seriesId || !timepointId) {
+      return;
     }
+
+    const newStart = updatedEvent.start.toDate();
+    const deltaDays = dayDeltaFromDates(oldStart, newStart);
+    if (deltaDays === 0) {
+      return;
+    }
+
+    onEventDayChange({
+      seriesId,
+      timepointId,
+      isAnchor: eventData.timepointNumber === 1,
+      newStart,
+      deltaDays,
+    });
   };
 
   const headerComponent = useMemo(
@@ -168,6 +258,7 @@ function CalendarPreviewImpl({
   return (
     <div className="rounded-[24px]" style={{ boxShadow: SURFACE_SHADOW }}>
       <div
+        ref={calendarShellRef}
         data-calendar-static={entranceComplete || undefined}
         className={cn(
           "flex h-[calc(100vh-3rem)] min-h-0 flex-col overflow-hidden rounded-[24px] border-0 bg-white",
@@ -181,7 +272,6 @@ function CalendarPreviewImpl({
             initialDate={initialDateRef.current ?? undefined}
             disableCellClick
             disableEventClick
-            disableDragAndDrop
             dayMaxEvents={4}
             eventHeight={22}
             eventSpacing={2}

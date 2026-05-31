@@ -116,8 +116,36 @@
     color: color-mix(in srgb, var(--event-accent) 70%, #000 30%);
     overflow: hidden;
     box-shadow: var(--surface-edge-inset);
-    transition: box-shadow 120ms ease-out, transform 120ms ease-out,
-      background-color 120ms ease-out;
+    cursor: grab;
+    transition: box-shadow 120ms ease-out, background-color 120ms ease-out;
+  }
+
+  .calendar-event-chip:active {
+    cursor: grabbing;
+  }
+
+  /* ilamy's DragOverlay uses a hardcoded amber preview — restyle it to match the
+     chip accent via --calendar-drag-accent (set on pointerdown in CalendarPreview). */
+  [data-testid="ilamy-calendar"] div.bg-amber-200.cursor-grab {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    padding: 0 8px !important;
+    border-radius: 3px !important;
+    display: flex !important;
+    align-items: center !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 1 !important;
+    box-shadow: var(--surface-edge-outer) !important;
+    background-color: color-mix(in srgb, var(--calendar-drag-accent, #6c96ff) 22%, white) !important;
+    border-left: 3px solid var(--calendar-drag-accent, #6c96ff) !important;
+    color: color-mix(in srgb, var(--calendar-drag-accent, #6c96ff) 70%, #000 30%) !important;
+  }
+
+  /* Hide the in-place chip while dragging; the styled overlay follows the cursor. */
+  [data-testid="ilamy-calendar"] .cursor-grabbing {
+    opacity: 0 !important;
   }
 
   /* Compact variant for month / year views: single-line row that fits inside a
@@ -399,5 +427,6 @@
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
+    animation: none !important;
   }
 }

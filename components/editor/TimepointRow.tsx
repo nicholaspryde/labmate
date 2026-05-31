@@ -1,7 +1,7 @@
 import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { addMinutes, format } from "date-fns";
-import { ChevronRight, Plus, X } from "lucide-react";
+import { ChevronRight, Check, Plus, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { fromTotalMinutes } from "@/lib/timepointMath";
@@ -172,6 +172,21 @@ function timeOptionButtonClassName(isSelected: boolean) {
   return cn(
     "flex w-full cursor-pointer items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent",
     isSelected && "bg-[#f0f0eb] font-medium text-[#161616] hover:bg-[#ebebe5]",
+  );
+}
+
+function relativePickerOptionClassName(isSelected: boolean) {
+  return cn(
+    "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent",
+    isSelected && "font-medium text-[#161616]",
+  );
+}
+
+function RelativePickerCheck({ selected }: { selected: boolean }) {
+  return (
+    <span className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+      {selected ? <Check className="h-3.5 w-3.5 text-[#161616]" strokeWidth={2.5} /> : null}
+    </span>
   );
 }
 
@@ -373,6 +388,7 @@ export function TimepointRow({
   const [relativeToMenuLevel, setRelativeToMenuLevel] = useState<"first" | "specific">("first");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [relativeToPickerAnchorEl, setRelativeToPickerAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const [relativeToSpecificItemEl, setRelativeToSpecificItemEl] = useState<HTMLButtonElement | null>(null);
   const relativeToPickerPanelRef = useRef<HTMLDivElement>(null);
   const relativeToSpecificPanelRef = useRef<HTMLDivElement>(null);
   const prevOptimizePulseKeyRef = useRef(optimizePulseKey);
@@ -858,7 +874,8 @@ export function TimepointRow({
                   >
                     <button
                       type="button"
-                      className={timeOptionButtonClassName(relativeToMode === "default")}
+                      className={relativePickerOptionClassName(relativeToMode === "default")}
+                      onMouseEnter={() => setRelativeToMenuLevel("first")}
                       onMouseDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -866,11 +883,13 @@ export function TimepointRow({
                         closeRelativeToPicker();
                       }}
                     >
-                      First event
+                      <span>First event</span>
+                      <RelativePickerCheck selected={relativeToMode === "default"} />
                     </button>
                     <button
                       type="button"
-                      className={timeOptionButtonClassName(relativeToMode === "previous")}
+                      className={relativePickerOptionClassName(relativeToMode === "previous")}
+                      onMouseEnter={() => setRelativeToMenuLevel("first")}
                       onMouseDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -878,35 +897,30 @@ export function TimepointRow({
                         closeRelativeToPicker();
                       }}
                     >
-                      previous event
+                      <span>previous event</span>
+                      <RelativePickerCheck selected={relativeToMode === "previous"} />
                     </button>
                     {relativeReferenceOptions.length > 0 && (
                       <button
+                        ref={setRelativeToSpecificItemEl}
                         type="button"
-                        className={cn(
-                          timeOptionButtonClassName(relativeToMode === "specific"),
-                          "flex items-center justify-between",
-                          relativeToMenuLevel === "specific" && "bg-[#f0f0eb]",
-                        )}
-                        onMouseDown={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          setRelativeToMenuLevel((level) =>
-                            level === "specific" ? "first" : "specific",
-                          );
-                        }}
+                        className={relativePickerOptionClassName(relativeToMode === "specific")}
+                        onMouseEnter={() => setRelativeToMenuLevel("specific")}
                       >
                         <span>specific event</span>
-                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[#6b6b74]" />
+                        <span className="flex shrink-0 items-center gap-1">
+                          <RelativePickerCheck selected={relativeToMode === "specific"} />
+                          <ChevronRight className="h-3.5 w-3.5 text-[#6b6b74]" />
+                        </span>
                       </button>
                     )}
                   </AnchoredList>
 
                   <AnchoredList
                     open={relativeToPickerOpen && relativeToMenuLevel === "specific"}
-                    anchorEl={relativeToPickerAnchorEl}
+                    anchorEl={relativeToSpecificItemEl}
                     panelRef={relativeToSpecificPanelRef}
-                    xOffset={204}
+                    placement="right"
                     width={192}
                   >
                     {relativeReferenceOptions.map((option) => {
@@ -916,7 +930,7 @@ export function TimepointRow({
                         <button
                           key={option.id}
                           type="button"
-                          className={timeOptionButtonClassName(isSelected)}
+                          className={relativePickerOptionClassName(isSelected)}
                           onMouseDown={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -924,7 +938,8 @@ export function TimepointRow({
                             closeRelativeToPicker();
                           }}
                         >
-                          {option.label}
+                          <span className="truncate">{option.label}</span>
+                          <RelativePickerCheck selected={isSelected} />
                         </button>
                       );
                     })}

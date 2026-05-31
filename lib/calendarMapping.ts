@@ -11,6 +11,7 @@ export type CalendarEventData = {
   timepointNumber: number;
   timepointName: string;
   timeLabel: string;
+  accentColor: string;
 };
 
 export function formatCalendarPreviewLabel(data: CalendarEventData): string {
@@ -27,7 +28,7 @@ export function mapSeriesToCalendarEvents(series: Series[]): IlamyCalendarEvent[
 
       return {
         id: `${item.id}:${timepoint.id}`,
-        title: `${item.name} - ${timepoint.name}`,
+        title: timepoint.name.trim() || `Timepoint ${index + 1}`,
         start: dayjs(timepoint.resolvedAt),
         end: dayjs(end),
         color: item.color,
@@ -44,6 +45,7 @@ export function mapSeriesToCalendarEvents(series: Series[]): IlamyCalendarEvent[
                   minute: "2-digit",
                 })
               : "",
+          accentColor: item.color,
         } satisfies CalendarEventData,
       };
     }),

@@ -34,9 +34,42 @@ export function TimepointCalendarApp() {
     dispatch({ type: "create-series", name: "" });
   };
 
-  const handleShiftSeriesDays = useCallback((seriesId: string, deltaDays: number) => {
-    dispatch({ type: "shift-series-days", seriesId, deltaDays });
-  }, []);
+  const handleEventDayChange = useCallback(
+    ({
+      seriesId,
+      timepointId,
+      isAnchor,
+      newStart,
+      deltaDays,
+    }: {
+      seriesId: string;
+      timepointId: string;
+      isAnchor: boolean;
+      newStart: Date;
+      deltaDays: number;
+    }) => {
+      if (isAnchor) {
+        dispatch({ type: "shift-series-days", seriesId, deltaDays });
+        return;
+      }
+
+      const series = state.series.find((item) => item.id === seriesId);
+      if (!series) {
+        return;
+      }
+
+      const anchorDate = new Date(series.anchorAt);
+      const minutesFromStart = Math.max(0, Math.round((newStart.getTime() - anchorDate.getTime()) / 60_000));
+      dispatch({
+        type: "set-timepoint-offset",
+        seriesId,
+        timepointId,
+        minutes: minutesFromStart,
+        mode: "from-start",
+      });
+    },
+    [state.series],
+  );
 
   const handleApplyWeekendAvoidance = useCallback(
     (deltaDays: number) => {
@@ -186,7 +219,7 @@ export function TimepointCalendarApp() {
               focusDate={activeSeries?.anchorAt ?? null}
               highlightedTimepointId={highlightedTimepointId}
               onHoverTimepoint={setHighlightedTimepointId}
-              onShiftSeriesDays={handleShiftSeriesDays}
+              onEventDayChange={handleEventDayChange}
             />
             </div>
           </div>
