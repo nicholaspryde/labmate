@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn, HIGHLIGHTED_SURFACE_SHADOW, SURFACE_SHADOW } from "@/lib/utils";
+import { cn, HIGHLIGHTED_SURFACE_SHADOW, SURFACE_SHADOW, SURFACE_SHADOW_HOVER } from "@/lib/utils";
 
 function formatRelativeReferenceReadout(
   relativeToMode: "default" | "previous" | "specific",
@@ -355,6 +355,7 @@ export function TimepointRow({
     transition,
   };
   const [showDescriptionInput, setShowDescriptionInput] = useState(Boolean(description.trim()));
+  const [isSurfaceHovered, setIsSurfaceHovered] = useState(false);
   const [timeEntryActive, setTimeEntryActive] = useState(hasScheduledTime);
   const [startTimeInput, setStartTimeInput] = useState("");
   const [endTimeInput, setEndTimeInput] = useState("");
@@ -713,12 +714,21 @@ export function TimepointRow({
       data-timepoint-id={id}
     >
       <div
-        className="rounded-[8px] bg-white"
-        style={{ boxShadow: isHighlighted ? HIGHLIGHTED_SURFACE_SHADOW : SURFACE_SHADOW }}
+        className="rounded-[8px] bg-white transition-[box-shadow] duration-150 ease-out"
+        style={{
+          boxShadow: isHighlighted
+            ? HIGHLIGHTED_SURFACE_SHADOW
+            : isSurfaceHovered
+              ? SURFACE_SHADOW_HOVER
+              : SURFACE_SHADOW,
+        }}
         data-highlighted={isHighlighted || undefined}
+        onMouseEnter={() => setIsSurfaceHovered(true)}
+        onMouseLeave={() => setIsSurfaceHovered(false)}
       >
-        <div className="timepoint-event-card group relative overflow-hidden rounded-[8px] border-0 p-3 transition-colors duration-150">
+        <div className="timepoint-event-card group overflow-hidden rounded-[8px] border-0 p-3 transition-colors duration-150">
       <motion.div
+        className="relative"
         initial={
           animateEnter && !shouldReduceMotion
             ? { opacity: 0, y: 6 }
@@ -735,7 +745,7 @@ export function TimepointRow({
             type="button"
             aria-label="Delete timepoint"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="pointer-events-none absolute right-3 top-3 z-20 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
+            className="pointer-events-none absolute right-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>

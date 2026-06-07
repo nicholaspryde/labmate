@@ -114,6 +114,10 @@ export function TimepointCalendarApp() {
                 if (!activeSeries) return;
                 dispatch({ type: "add-timepoint", seriesId: activeSeries.id });
               }}
+              onClearAllTimepoints={() => {
+                if (!activeSeries) return;
+                dispatch({ type: "clear-all-timepoints", seriesId: activeSeries.id });
+              }}
               onDeleteTimepoint={(timepointId) => {
                 if (!activeSeries) return;
                 dispatch({ type: "delete-timepoint", seriesId: activeSeries.id, timepointId });

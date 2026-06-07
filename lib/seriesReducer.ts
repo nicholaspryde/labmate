@@ -32,6 +32,7 @@ export type SeriesAction =
   | { type: "set-timepoint-duration"; seriesId: string; timepointId: string; durationMinutes: number }
   | { type: "add-timepoint"; seriesId: string }
   | { type: "delete-timepoint"; seriesId: string; timepointId: string }
+  | { type: "clear-all-timepoints"; seriesId: string }
   | { type: "reorder-timepoints"; seriesId: string; fromIndex: number; toIndex: number }
   | {
       type: "set-timepoint-offset";
@@ -238,6 +239,24 @@ export function seriesReducer(state: AppState, action: SeriesAction): AppState {
               : timepoint,
           ),
       }));
+    case "clear-all-timepoints":
+      return updateSeries(state, action.seriesId, (series) => {
+        const anchor = series.timepoints[0];
+        return {
+          ...series,
+          anchorAt: nowAnchorIso(),
+          timepoints: [
+            {
+              id: anchor?.id ?? uuid(),
+              name: "",
+              description: "",
+              offsetFromStartMinutes: 0,
+              hasScheduledTime: false,
+              durationMinutes: 60,
+            },
+          ],
+        };
+      });
     case "reorder-timepoints":
       return updateSeries(state, action.seriesId, (series) => {
         if (action.fromIndex === 0 || action.toIndex === 0) {

@@ -276,7 +276,7 @@ function CalendarPreviewImpl({
             eventHeight={22}
             eventSpacing={2}
             classesOverride={{
-              disabledCell: "bg-[#fafbfc] text-[#c5c8cd] pointer-events-none",
+              disabledCell: "bg-[#f6f5f2] text-[#cdcac5] pointer-events-none",
             }}
             onEventUpdate={handleEventUpdate}
             headerComponent={headerComponent}

@@ -3,7 +3,6 @@
 import { Sparkles } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useMemo } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   buildWeekendAvoidanceSuggestion,
@@ -14,6 +13,7 @@ import type { Series } from "@/lib/types";
 type AvoidWeekendsButtonProps = {
   series: Series;
   onApply: (deltaDays: number) => void;
+  onMessage?: (message: string) => void;
 };
 
 const optimizeRevealTransition = {
@@ -21,14 +21,18 @@ const optimizeRevealTransition = {
   ease: [0.33, 1, 0.68, 1] as const,
 };
 
-function formatOptimizeToast(deltaDays: number): string {
+export function formatOptimizeToast(deltaDays: number): string {
   const magnitude = Math.abs(deltaDays);
   const unit = magnitude === 1 ? "day" : "days";
   const direction = deltaDays > 0 ? "forward" : "back";
   return `Shifted events ${direction} ${magnitude} ${unit}`;
 }
 
-export function AvoidWeekendsButton({ series, onApply }: AvoidWeekendsButtonProps) {
+export function isOptimizeSuccessMessage(message: string): boolean {
+  return message.startsWith("Shifted events");
+}
+
+export function AvoidWeekendsButton({ series, onApply, onMessage }: AvoidWeekendsButtonProps) {
   const shouldReduceMotion = useReducedMotion();
   const canOptimize = shouldOfferWeekendAvoidance(series);
   const suggestion = useMemo(
@@ -38,12 +42,12 @@ export function AvoidWeekendsButton({ series, onApply }: AvoidWeekendsButtonProp
 
   const handleOptimize = () => {
     if (!suggestion) {
-      toast.error("Couldn't avoid weekends");
+      onMessage?.("Couldn't avoid weekends");
       return;
     }
 
     onApply(suggestion.deltaDays);
-    toast(formatOptimizeToast(suggestion.deltaDays));
+    onMessage?.(formatOptimizeToast(suggestion.deltaDays));
   };
 
   return (

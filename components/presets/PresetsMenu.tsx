@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SavePresetDialog } from "@/components/presets/SavePresetDialog";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { listSavedPresets } from "@/lib/presets/storage";
+import { deleteSavedPreset, listSavedPresets } from "@/lib/presets/storage";
 import type { ProtocolPreset } from "@/lib/presets/types";
 import type { OffsetMode, Series } from "@/lib/types";
 
@@ -41,6 +41,11 @@ export function PresetsMenu({ series, offsetMode, onApplyPreset }: PresetsMenuPr
     setSavedPresets(listSavedPresets());
   };
 
+  const handleDelete = (presetId: string) => {
+    deleteSavedPreset(presetId);
+    setSavedPresets(listSavedPresets());
+  };
+
   return (
     <>
       <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -57,8 +62,24 @@ export function PresetsMenu({ series, offsetMode, onApplyPreset }: PresetsMenuPr
             <DropdownMenuItem disabled>No saved presets yet</DropdownMenuItem>
           ) : (
             savedPresets.map((preset) => (
-              <DropdownMenuItem key={preset.id} onSelect={() => handleApply(preset)}>
-                {preset.name}
+              <DropdownMenuItem
+                key={preset.id}
+                className="group flex items-center gap-1 pr-1"
+                onSelect={() => handleApply(preset)}
+              >
+                <span className="min-w-0 flex-1 truncate">{preset.name}</span>
+                <button
+                  type="button"
+                  aria-label={`Delete ${preset.name}`}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:opacity-100 group-focus:opacity-100"
+                  onPointerDown={(event) => event.preventDefault()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleDelete(preset.id);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                </button>
               </DropdownMenuItem>
             ))
           )}
