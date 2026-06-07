@@ -6,7 +6,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { DEFAULT_ANCHOR_NAME, RELATIVE_TO_PREVIOUS, type OffsetMode, type Series } from "@/lib/types";
+import { defaultEventLabel, RELATIVE_TO_PREVIOUS, type OffsetMode, type Series } from "@/lib/types";
 import {
   computeAuthorOffsetMinutes,
   computeDisplayOffsetMinutes,
@@ -461,15 +461,14 @@ export function TimepointEditor({
               {series.timepoints.map((timepoint, index) => {
                 const referenceId = effectiveRelativeToTimepointId(series, timepoint, index, mode);
                 const referenceIndex = series.timepoints.findIndex((candidate) => candidate.id === referenceId);
+                const resolvedReferenceIndex = referenceIndex >= 0 ? referenceIndex : 0;
                 const referenceTimepoint =
                   referenceIndex >= 0 ? series.timepoints[referenceIndex] : series.timepoints[0];
                 const relativeReferenceOptions = series.timepoints
-                  .filter((_, candidateIndex) => candidateIndex < index)
+                  .slice(0, index)
                   .map((candidate, candidateIndex) => ({
                     id: candidate.id,
-                    label:
-                      candidate.name.trim() ||
-                      (candidateIndex === 0 ? DEFAULT_ANCHOR_NAME : `Timepoint ${candidateIndex + 1}`),
+                    label: candidate.name.trim() || defaultEventLabel(candidateIndex),
                   }));
 
                 const relativeToMode: "default" | "previous" | "specific" =
@@ -494,8 +493,7 @@ export function TimepointEditor({
                   displayOffsetMinutes={computeDisplayOffsetMinutes(series, index, mode)}
                   authorOffsetMinutes={computeAuthorOffsetMinutes(series, index, mode)}
                   relativeReferenceLabel={
-                    referenceTimepoint?.name.trim() ||
-                    (referenceIndex === 0 ? DEFAULT_ANCHOR_NAME : `Timepoint ${referenceIndex + 1}`)
+                    referenceTimepoint?.name.trim() || defaultEventLabel(resolvedReferenceIndex)
                   }
                   relativeReferenceOptions={relativeReferenceOptions}
                   selectedRelativeReferenceId={referenceId}

@@ -1,5 +1,5 @@
 import { addDays, addMinutes, differenceInCalendarDays, format, getDay } from "date-fns";
-import { DEFAULT_ANCHOR_NAME } from "@/lib/types";
+import { defaultEventLabel } from "@/lib/types";
 import { RELATIVE_TO_PREVIOUS, type Offset, type OffsetMode, type Series, type Timepoint } from "@/lib/types";
 
 export const MINUTES_IN_DAY = 24 * 60;
@@ -190,9 +190,7 @@ export function buildWeekendAvoidanceSuggestion(series: Series): WeekendAvoidanc
     .map((timepoint, index) => ({ timepoint, index }))
     .filter(({ timepoint }) => isWeekend(timepoint.resolvedAt))
     .map(({ timepoint, index }) => ({
-      label:
-        timepoint.name.trim() ||
-        (index === 0 ? DEFAULT_ANCHOR_NAME : `Timepoint ${index + 1}`),
+      label: timepoint.name.trim() || defaultEventLabel(index),
       from: timepoint.resolvedAt,
       to: addDays(timepoint.resolvedAt, deltaDays),
     }));
