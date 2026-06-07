@@ -222,7 +222,7 @@ export function TimepointEditor({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "t" && event.key !== "T") {
+      if (event.key !== "e" && event.key !== "E") {
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) {
@@ -254,7 +254,7 @@ export function TimepointEditor({
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key === "t" || event.key === "T") {
+      if (event.key === "e" || event.key === "E") {
         setIsAddTimepointPressed(false);
       }
     };
@@ -546,8 +546,8 @@ export function TimepointEditor({
             )}
             onClick={handleAddTimepoint}
           >
-            + Timepoint
-            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">t</Kbd>
+            + Add event
+            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">e</Kbd>
           </Button>
         </motion.div>
         </div>
