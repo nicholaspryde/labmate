@@ -35,8 +35,11 @@ import { cn } from "@/lib/utils";
 
 const TOOLTIP_CONTENT_CLASS = "border-0 bg-[#161616] text-white";
 const DEFAULT_EXPORT_DURATION_MINUTES = 30;
-const OPTIMIZE_MESSAGE_MS = 4000;
+const OPTIMIZE_MESSAGE_MS = 5000;
 const EXPORT_SUCCESS_MS = 1200;
+const ADD_EVENT_PRESS_SCALE = 0.985;
+const ADD_EVENT_PRESS_TRANSITION = { type: "spring", visualDuration: 0.18, bounce: 0.12 } as const;
+const MotionButton = motion.create(Button);
 type TimepointEditorProps = {
   series: Series | null;
   mode: OffsetMode;
@@ -441,7 +444,7 @@ export function TimepointEditor({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.96 }}
               transition={{ duration: 0.2, ease: [0.33, 1, 0.68, 1] }}
-              className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center px-3"
+              className="pointer-events-none absolute inset-x-0 top-1 z-10 flex justify-center px-3"
               role="status"
               aria-live="polite"
             >
@@ -536,19 +539,24 @@ export function TimepointEditor({
           transition={{ type: "spring", visualDuration: 0.42, bounce: 0 }}
           style={{ willChange: "transform" }}
         >
-          <Button
+          <MotionButton
             type="button"
             variant="ghost"
             data-add-timepoint-button
             className={cn(
-              "h-12 w-full cursor-pointer gap-2 rounded-[12px] text-[12px] font-medium tracking-[0.16px] text-[#161616] transition-colors duration-100 hover:bg-[#f0f0eb] hover:text-[#161616] active:bg-[#e8e8e4]",
+              "h-12 w-full cursor-pointer gap-2 rounded-[12px] bg-[#f0f0eb] text-[12px] font-medium tracking-[0.16px] text-[#161616] transition-colors duration-100 hover:bg-[#e8e8e4] hover:text-[#161616] active:bg-[#e8e8e4]",
               isAddTimepointPressed && "bg-[#e8e8e4]",
             )}
+            animate={
+              shouldReduceMotion ? undefined : { scale: isAddTimepointPressed ? ADD_EVENT_PRESS_SCALE : 1 }
+            }
+            whileTap={shouldReduceMotion ? undefined : { scale: ADD_EVENT_PRESS_SCALE }}
+            transition={ADD_EVENT_PRESS_TRANSITION}
             onClick={handleAddTimepoint}
           >
             + Add event
-            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">e</Kbd>
-          </Button>
+            <Kbd className="h-4 min-w-4 px-0.5 text-[10px] text-[#6b6b74]">e</Kbd>
+          </MotionButton>
         </motion.div>
         </div>
       </div>
