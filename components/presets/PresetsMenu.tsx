@@ -56,7 +56,9 @@ export function PresetsMenu({ series, offsetMode, onApplyPreset }: PresetsMenuPr
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
-          <DropdownMenuItem onSelect={() => setSaveOpen(true)}>Save preset</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setSaveOpen(true)}>
+            Save current view as preset
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           {savedPresets.length === 0 ? (
             <DropdownMenuItem disabled>No saved presets yet</DropdownMenuItem>

@@ -1343,6 +1343,10 @@ export function TimepointRow({
                           value={description}
                           placeholder="Add description"
                           rows={1}
+                          autoComplete="off"
+                          data-1p-ignore=""
+                          data-lpignore="true"
+                          data-form-type="other"
                           className="mx-1 block min-h-8 min-w-0 flex-1 resize-none border-0 bg-transparent px-0 pr-2 py-[6px] text-sm font-normal leading-5 text-[#161616] shadow-none outline-none placeholder:text-[#a8adb5] focus-visible:ring-0 [field-sizing:content]"
                           onClick={(event) => event.stopPropagation()}
                           onChange={(event) => onDescriptionChange(event.target.value)}
