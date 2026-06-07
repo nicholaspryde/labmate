@@ -367,7 +367,7 @@ export function TimepointRow({
   const endTimeInputRef = useRef<HTMLInputElement>(null);
   const skipNextStartTimeBlurApplyRef = useRef(false);
   const skipNextEndTimeBlurApplyRef = useRef(false);
-  const timeBlurCancelTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeBlurCancelTimeoutRef = useRef<number | null>(null);
   const timeEntryCancelStateRef = useRef({
     hasScheduledTime,
     startTimeInput,
@@ -560,14 +560,14 @@ export function TimepointRow({
 
   const clearTimeBlurCancelTimeout = () => {
     if (timeBlurCancelTimeoutRef.current !== null) {
-      clearTimeout(timeBlurCancelTimeoutRef.current);
+      window.clearTimeout(timeBlurCancelTimeoutRef.current);
       timeBlurCancelTimeoutRef.current = null;
     }
   };
 
   const scheduleTimeBlurCancel = (which: "start" | "end") => {
     clearTimeBlurCancelTimeout();
-    timeBlurCancelTimeoutRef.current = setTimeout(() => {
+    timeBlurCancelTimeoutRef.current = window.setTimeout(() => {
       timeBlurCancelTimeoutRef.current = null;
       if (which === "start") {
         setStartSuggestionsOpen(false);

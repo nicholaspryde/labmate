@@ -99,7 +99,7 @@ export function TimepointEditor({
   const [exportIconState, setExportIconState] = useState<"a" | "b">("a");
   const [clearAllOpen, setClearAllOpen] = useState(false);
   const [isAddTimepointPressed, setIsAddTimepointPressed] = useState(false);
-  const exportResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exportResetTimeoutRef = useRef<number | null>(null);
   const pendingNameFocusRef = useRef(false);
   const pendingScrollTimepointIdRef = useRef<string | null>(null);
   const seriesNameInputRef = useRef<HTMLInputElement>(null);

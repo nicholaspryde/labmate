@@ -173,6 +173,9 @@ function CalendarPreviewImpl({
       }
 
       for (const preview of calendar.querySelectorAll("div.bg-amber-200")) {
+        if (!(preview instanceof HTMLElement)) {
+          continue;
+        }
         let node: HTMLElement | null = preview;
         while (node && node !== calendar) {
           if (getComputedStyle(node).position === "fixed") {
