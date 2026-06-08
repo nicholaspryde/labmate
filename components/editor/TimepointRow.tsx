@@ -1038,22 +1038,7 @@ export function TimepointRow({
                     )}
                     aria-label="Choose event day"
                   >
-                    <AnimatePresence mode="popLayout" initial={false}>
-                      <motion.span
-                        key={`${optimizePulseKey}-${formattedDateLabel}`}
-                        initial={
-                          shouldReduceMotion || optimizePulseKey === 0
-                            ? false
-                            : { opacity: 0.45, y: 2 }
-                        }
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -2 }}
-                        transition={optimizeValueTransition}
-                        className="inline-block"
-                      >
-                        {formattedDateLabel}
-                      </motion.span>
-                    </AnimatePresence>
+                    {formattedDateLabel}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
