@@ -19,7 +19,7 @@ type SeriesTabProps = {
 
 export function SeriesTab({
   item,
-  placeholder = "Timeseries name",
+  placeholder = "Series name",
   isActive,
   isEditing,
   showDelete = false,
