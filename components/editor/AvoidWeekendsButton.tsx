@@ -21,11 +21,21 @@ const optimizeRevealTransition = {
   ease: [0.33, 1, 0.68, 1] as const,
 };
 
-export function formatOptimizeToast(deltaDays: number): string {
+export function formatOptimizeToast(
+  deltaDays: number,
+  remainingWeekendCount: number,
+  isFullyClear: boolean,
+): string {
   const magnitude = Math.abs(deltaDays);
   const unit = magnitude === 1 ? "day" : "days";
   const direction = deltaDays > 0 ? "forward" : "back";
-  return `Shifted events ${direction} ${magnitude} ${unit}`;
+  const base = `Shifted events ${direction} ${magnitude} ${unit}`;
+  if (isFullyClear) {
+    return base;
+  }
+  const remainUnit = remainingWeekendCount === 1 ? "day" : "days";
+  const verb = remainingWeekendCount === 1 ? "remains" : "remain";
+  return `${base} · ${remainingWeekendCount} weekend ${remainUnit} ${verb}`;
 }
 
 export function isOptimizeSuccessMessage(message: string): boolean {
@@ -42,12 +52,14 @@ export function AvoidWeekendsButton({ series, onApply, onMessage }: AvoidWeekend
 
   const handleOptimize = () => {
     if (!suggestion) {
-      onMessage?.("Couldn't avoid weekends");
+      onMessage?.("Already uses the fewest weekend days possible");
       return;
     }
 
     onApply(suggestion.deltaDays);
-    onMessage?.(formatOptimizeToast(suggestion.deltaDays));
+    onMessage?.(
+      formatOptimizeToast(suggestion.deltaDays, suggestion.remainingWeekendCount, suggestion.isFullyClear),
+    );
   };
 
   return (
@@ -66,7 +78,7 @@ export function AvoidWeekendsButton({ series, onApply, onMessage }: AvoidWeekend
             type="button"
             variant="toolbar"
             aria-label="Optimize"
-            title="Shift dates to avoid weekends"
+            title="Shift dates to minimize weekends"
             className="gap-1.5"
             onClick={handleOptimize}
           >

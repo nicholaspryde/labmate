@@ -135,34 +135,75 @@ export function shouldOfferWeekendAvoidance(series: Series): boolean {
   return series.timepoints.length >= 3 && hasWeekendTimepoints(series);
 }
 
-/** Smallest calendar-day shift (-14…+14) so every resolved timepoint lands on a weekday. */
-export function computeShiftToAvoidWeekends(series: Series): number {
+type ResolvedTimepoint = Timepoint & { resolvedAt: Date };
+
+function countWeekendTimepoints(resolved: ResolvedTimepoint[], deltaDays: number): number {
+  return resolved.filter((timepoint) => isWeekend(addDays(timepoint.resolvedAt, deltaDays))).length;
+}
+
+export type WeekendOptimization = {
+  deltaDays: number;
+  weekendCount: number;
+  isFullyClear: boolean;
+};
+
+/** Best calendar-day shift in ±14 days: clear all weekends when possible, else minimize count. */
+export function computeWeekendOptimization(series: Series): WeekendOptimization {
   const resolved = resolveSeriesDates(series);
   if (resolved.length === 0) {
-    return 0;
+    return { deltaDays: 0, weekendCount: 0, isFullyClear: true };
   }
 
-  const isClear = (deltaDays: number) =>
-    resolved.every((timepoint) => !isWeekend(addDays(timepoint.resolvedAt, deltaDays)));
-
-  if (isClear(0)) {
-    return 0;
+  const currentCount = countWeekendTimepoints(resolved, 0);
+  if (currentCount === 0) {
+    return { deltaDays: 0, weekendCount: 0, isFullyClear: true };
   }
+
+  const isClear = (deltaDays: number) => countWeekendTimepoints(resolved, deltaDays) === 0;
 
   for (let magnitude = 1; magnitude <= 14; magnitude += 1) {
     if (isClear(magnitude)) {
-      return magnitude;
+      return { deltaDays: magnitude, weekendCount: 0, isFullyClear: true };
     }
     if (isClear(-magnitude)) {
-      return -magnitude;
+      return { deltaDays: -magnitude, weekendCount: 0, isFullyClear: true };
     }
   }
 
-  return 0;
+  let best: WeekendOptimization = {
+    deltaDays: 0,
+    weekendCount: currentCount,
+    isFullyClear: false,
+  };
+
+  for (let magnitude = 0; magnitude <= 14; magnitude += 1) {
+    const candidates = magnitude === 0 ? [0] : [magnitude, -magnitude];
+    for (const deltaDays of candidates) {
+      const weekendCount = countWeekendTimepoints(resolved, deltaDays);
+      const absDelta = Math.abs(deltaDays);
+      const absBest = Math.abs(best.deltaDays);
+      const isBetter =
+        weekendCount < best.weekendCount ||
+        (weekendCount === best.weekendCount && absDelta < absBest) ||
+        (weekendCount === best.weekendCount && absDelta === absBest && deltaDays > best.deltaDays);
+
+      if (isBetter) {
+        best = { deltaDays, weekendCount, isFullyClear: false };
+      }
+    }
+  }
+
+  return best;
+}
+
+/** Smallest calendar-day shift (-14…+14) so every resolved timepoint lands on a weekday. */
+export function computeShiftToAvoidWeekends(series: Series): number {
+  const optimization = computeWeekendOptimization(series);
+  return optimization.isFullyClear ? optimization.deltaDays : 0;
 }
 
 export function optimizeSeriesAvoidWeekends(series: Series): Series {
-  const deltaDays = computeShiftToAvoidWeekends(series);
+  const { deltaDays } = computeWeekendOptimization(series);
   return shiftSeriesByCalendarDays(series, deltaDays);
 }
 
@@ -170,7 +211,10 @@ export type WeekendAvoidanceSuggestion = {
   deltaDays: number;
   currentAnchor: Date;
   suggestedAnchor: Date;
-  /** Resolved timepoints that currently fall on a weekend. */
+  isFullyClear: boolean;
+  currentWeekendCount: number;
+  remainingWeekendCount: number;
+  /** Resolved timepoints that would still fall on a weekend after the shift. */
   affectedTimepoints: Array<{
     label: string;
     from: Date;
@@ -179,16 +223,23 @@ export type WeekendAvoidanceSuggestion = {
 };
 
 export function buildWeekendAvoidanceSuggestion(series: Series): WeekendAvoidanceSuggestion | null {
-  const deltaDays = computeShiftToAvoidWeekends(series);
-  if (deltaDays === 0) {
+  const resolved = resolveSeriesDates(series);
+  const currentWeekendCount = countWeekendTimepoints(resolved, 0);
+  if (currentWeekendCount === 0) {
     return null;
   }
 
+  const optimization = computeWeekendOptimization(series);
+  if (optimization.deltaDays === 0) {
+    return null;
+  }
+
+  const { deltaDays, weekendCount, isFullyClear } = optimization;
   const currentAnchor = new Date(series.anchorAt);
   const suggestedAnchor = addDays(currentAnchor, deltaDays);
-  const affectedTimepoints = resolveSeriesDates(series)
+  const affectedTimepoints = resolved
     .map((timepoint, index) => ({ timepoint, index }))
-    .filter(({ timepoint }) => isWeekend(timepoint.resolvedAt))
+    .filter(({ timepoint }) => isWeekend(addDays(timepoint.resolvedAt, deltaDays)))
     .map(({ timepoint, index }) => ({
       label: timepoint.name.trim() || defaultEventLabel(index),
       from: timepoint.resolvedAt,
@@ -199,12 +250,24 @@ export function buildWeekendAvoidanceSuggestion(series: Series): WeekendAvoidanc
     deltaDays,
     currentAnchor,
     suggestedAnchor,
+    isFullyClear,
+    currentWeekendCount,
+    remainingWeekendCount: weekendCount,
     affectedTimepoints,
   };
 }
 
-export function formatWeekendAvoidanceHeadline(suggestedAnchor: Date): string {
-  return `Starting on ${format(suggestedAnchor, "EEEE, MMM d")} avoids weekends`;
+export function formatWeekendAvoidanceHeadline(
+  suggestedAnchor: Date,
+  remainingWeekendCount = 0,
+): string {
+  const datePart = format(suggestedAnchor, "EEEE, MMM d");
+  if (remainingWeekendCount === 0) {
+    return `Starting on ${datePart} avoids weekends`;
+  }
+  const unit = remainingWeekendCount === 1 ? "day" : "days";
+  const verb = remainingWeekendCount === 1 ? "remains" : "remain";
+  return `Starting on ${datePart} minimizes weekends (${remainingWeekendCount} ${unit} ${verb})`;
 }
 
 export function formatWeekendShiftSummary(deltaDays: number): string {

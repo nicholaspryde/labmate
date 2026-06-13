@@ -7,6 +7,7 @@ import {
   computeOffsetFromPrevious,
   buildWeekendAvoidanceSuggestion,
   computeShiftToAvoidWeekends,
+  computeWeekendOptimization,
   dayDeltaFromDates,
   formatWeekendAvoidanceHeadline,
   hasWeekendTimepoints,
@@ -135,9 +136,78 @@ describe("timepoint math", () => {
     };
     const suggestion = buildWeekendAvoidanceSuggestion(series);
     expect(suggestion?.deltaDays).toBe(2);
-    expect(suggestion?.affectedTimepoints).toHaveLength(2);
+    expect(suggestion?.isFullyClear).toBe(true);
+    expect(suggestion?.affectedTimepoints).toHaveLength(0);
     expect(formatWeekendAvoidanceHeadline(suggestion!.suggestedAnchor)).toMatch(
       /^Starting on Monday, May 4 avoids weekends$/,
     );
+  });
+
+  it("minimizes weekend days when full avoidance is impossible", () => {
+    const series: Series = {
+      id: "s1",
+      name: "Series",
+      color: "#000000",
+      anchorAt: new Date("2026-05-06T10:00:00").toISOString(),
+      timepoints: Array.from({ length: 6 }, (_, index) => ({
+        id: `t${index + 1}`,
+        name: `Day ${index}`,
+        description: "",
+        offsetFromStartMinutes: index * MINUTES_IN_DAY,
+      })),
+    };
+
+    const optimization = computeWeekendOptimization(series);
+    expect(optimization.isFullyClear).toBe(false);
+    expect(optimization.deltaDays).toBe(-2);
+    expect(optimization.weekendCount).toBe(1);
+
+    const suggestion = buildWeekendAvoidanceSuggestion(series);
+    expect(suggestion?.deltaDays).toBe(-2);
+    expect(suggestion?.isFullyClear).toBe(false);
+    expect(suggestion?.remainingWeekendCount).toBe(1);
+    expect(suggestion?.affectedTimepoints).toHaveLength(1);
+    expect(formatWeekendAvoidanceHeadline(suggestion!.suggestedAnchor, 1)).toMatch(
+      /^Starting on Monday, May 4 minimizes weekends \(1 day remains\)$/,
+    );
+  });
+
+  it("returns null when the schedule already uses the fewest weekend days", () => {
+    const series: Series = {
+      id: "s1",
+      name: "Series",
+      color: "#000000",
+      anchorAt: new Date("2026-05-04T10:00:00").toISOString(),
+      timepoints: Array.from({ length: 6 }, (_, index) => ({
+        id: `t${index + 1}`,
+        name: `Day ${index}`,
+        description: "",
+        offsetFromStartMinutes: index * MINUTES_IN_DAY,
+      })),
+    };
+
+    const optimization = computeWeekendOptimization(series);
+    expect(optimization.isFullyClear).toBe(false);
+    expect(optimization.deltaDays).toBe(0);
+    expect(optimization.weekendCount).toBe(1);
+
+    expect(buildWeekendAvoidanceSuggestion(series)).toBeNull();
+  });
+
+  it("prefers the current position when multiple shifts tie on weekend count", () => {
+    const series: Series = {
+      id: "s1",
+      name: "Series",
+      color: "#000000",
+      anchorAt: new Date("2026-05-04T10:00:00").toISOString(),
+      timepoints: Array.from({ length: 6 }, (_, index) => ({
+        id: `t${index + 1}`,
+        name: `Day ${index}`,
+        description: "",
+        offsetFromStartMinutes: index * MINUTES_IN_DAY,
+      })),
+    };
+
+    expect(computeWeekendOptimization(series).deltaDays).toBe(0);
   });
 });

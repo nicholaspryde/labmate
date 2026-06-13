@@ -2,6 +2,7 @@
 
 import { useCallback, useDeferredValue, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import { CalendarPreview } from "@/components/calendar/CalendarPreview";
+import { SeriesTabBar } from "@/components/editor/SeriesTabBar";
 import { TimepointEditor } from "@/components/editor/TimepointEditor";
 import { Button } from "@/components/ui/button";
 import { mapSeriesToCalendarEvents } from "@/lib/calendarMapping";
@@ -93,7 +94,19 @@ export function TimepointCalendarApp() {
             <Button onClick={createSeries}>Create protocol</Button>
           </div>
         ) : (
-          <div className="grid h-full gap-x-6 gap-y-0 lg:h-[calc(100vh-1.5rem)] lg:grid-cols-[460px_1fr] lg:grid-rows-1">
+          <div className="flex h-full flex-col lg:h-[calc(100vh-1.5rem)]">
+            <SeriesTabBar
+              allSeries={state.series}
+              activeSeries={activeSeries}
+              activeSeriesId={state.activeSeriesId}
+              onCreateSeries={createSeries}
+              onSetActiveSeries={(seriesId) => dispatch({ type: "set-active-series", seriesId })}
+              onDeleteSeries={(seriesId) => dispatch({ type: "delete-series", seriesId })}
+              onSeriesNameChange={(seriesId, name) =>
+                dispatch({ type: "set-series-name", seriesId, name })
+              }
+            />
+            <div className="grid min-h-0 flex-1 gap-x-6 gap-y-4 pt-4 lg:grid-cols-[460px_1fr]">
             <div className="flex min-h-0 flex-col">
             <TimepointEditor
               series={activeSeries}
@@ -103,9 +116,6 @@ export function TimepointCalendarApp() {
               showTopBarFade={isEditorScrolled}
               highlightedTimepointId={highlightedTimepointId}
               onModeChange={(mode) => dispatch({ type: "set-offset-mode", mode })}
-              onSeriesNameChange={(name) =>
-                activeSeries && dispatch({ type: "set-series-name", seriesId: activeSeries.id, name })
-              }
               onAnchorDateTimeChange={(anchorAt) => {
                 if (!activeSeries) return;
                 dispatch({ type: "set-anchor-date-time", seriesId: activeSeries.id, anchorAt });
@@ -113,10 +123,6 @@ export function TimepointCalendarApp() {
               onAddTimepoint={() => {
                 if (!activeSeries) return;
                 dispatch({ type: "add-timepoint", seriesId: activeSeries.id });
-              }}
-              onClearAllTimepoints={() => {
-                if (!activeSeries) return;
-                dispatch({ type: "clear-all-timepoints", seriesId: activeSeries.id });
               }}
               onDeleteTimepoint={(timepointId) => {
                 if (!activeSeries) return;
@@ -214,10 +220,14 @@ export function TimepointCalendarApp() {
                 });
               }}
               onApplyWeekendAvoidance={handleApplyWeekendAvoidance}
+              onClearAllTimepoints={() => {
+                if (!activeSeries) return;
+                dispatch({ type: "clear-all-timepoints", seriesId: activeSeries.id });
+              }}
               optimizePulseKey={optimizePulseKey}
             />
             </div>
-            <div className="min-h-0 lg:sticky lg:top-0 lg:self-start">
+            <div className="flex min-h-0 flex-col">
             <CalendarPreview
               events={calendarEvents}
               focusDate={activeSeries?.anchorAt ?? null}
@@ -225,6 +235,7 @@ export function TimepointCalendarApp() {
               onHoverTimepoint={setHighlightedTimepointId}
               onEventDayChange={handleEventDayChange}
             />
+            </div>
             </div>
           </div>
         )}

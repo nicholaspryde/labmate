@@ -259,12 +259,12 @@ function CalendarPreviewImpl({
   );
 
   return (
-    <div className="rounded-[24px]" style={{ boxShadow: SURFACE_SHADOW }}>
+    <div className="h-full min-h-0 rounded-[24px]" style={{ boxShadow: SURFACE_SHADOW }}>
       <div
         ref={calendarShellRef}
         data-calendar-static={entranceComplete || undefined}
         className={cn(
-          "flex h-[calc(100vh-3rem)] min-h-0 flex-col overflow-hidden rounded-[24px] border-0 bg-white",
+          "flex h-full min-h-0 flex-col overflow-hidden rounded-[24px] border-0 bg-white",
         )}
       >
       <div className="min-h-0 flex-1">
