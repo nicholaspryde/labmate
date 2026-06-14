@@ -6,7 +6,6 @@ import { useReducedMotion } from "motion/react";
 import { ExportCalendarDialog } from "@/components/editor/ExportCalendarDialog";
 import { SeriesTab } from "@/components/editor/SeriesTab";
 import { exportAllSeriesAsIcs } from "@/lib/icsExport";
-import { BOOTSTRAP_SERIES_ID } from "@/lib/seriesReducer";
 import type { Series } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,7 +62,6 @@ export function SeriesTabBar({
   const tabsMeasureRef = useRef<HTMLDivElement>(null);
   const [tabsOverflow, setTabsOverflow] = useState(false);
   const [addSeriesWidth, setAddSeriesWidth] = useState(0);
-  const [bootstrapPlaceholderShimmer, setBootstrapPlaceholderShimmer] = useState(true);
   const shouldReduceMotion = useReducedMotion();
 
   const hasAdditionalEvents = allSeries.some((series) => series.timepoints.length > 1);
@@ -191,12 +189,6 @@ export function SeriesTabBar({
     }
   };
 
-  const dismissBootstrapPlaceholderShimmer = (seriesId: string) => {
-    if (seriesId === BOOTSTRAP_SERIES_ID) {
-      setBootstrapPlaceholderShimmer(false);
-    }
-  };
-
   const seriesTabs = allSeries.map((item) => (
     <SeriesTab
       key={item.id}
@@ -208,19 +200,14 @@ export function SeriesTabBar({
       isActive={item.id === activeSeriesId}
       isEditing={editingSeriesId === item.id}
       showDelete={allSeries.length > 1}
-      showPlaceholderShimmer={
-        item.id === BOOTSTRAP_SERIES_ID && bootstrapPlaceholderShimmer && !shouldReduceMotion
-      }
       onActivate={() => {
         onSetActiveSeries(item.id);
         setEditingSeriesId(item.id);
       }}
       onNameChange={(name) => {
-        dismissBootstrapPlaceholderShimmer(item.id);
         onSeriesNameChange(item.id, name);
       }}
       onFinishEdit={() => {
-        dismissBootstrapPlaceholderShimmer(item.id);
         setEditingSeriesId(null);
       }}
       onDelete={() => handleDeleteSeriesRequest(item.id)}

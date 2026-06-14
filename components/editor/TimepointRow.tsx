@@ -5,9 +5,9 @@ import { ChevronRight, Check, Plus, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { fromTotalMinutes } from "@/lib/timepointMath";
+import { isBootstrapPlaceholderAnchor } from "@/lib/seriesReducer";
 import { RELATIVE_TO_PREVIOUS, type OffsetMode } from "@/lib/types";
 import { AnchoredList } from "@/components/ui/anchored-list";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -27,6 +27,9 @@ function formatRelativeReferenceReadout(
   }
   return `from ${referenceLabel}`;
 }
+
+/** Reserves date-label width before the bootstrap anchor is replaced on mount. */
+const DATE_LABEL_SIZE_PLACEHOLDER = "Sunday, June 14";
 
 function formatRelativeOffsetInput(totalMinutes: number): string {
   const { days, hours, minutes } = fromTotalMinutes(totalMinutes);
@@ -275,6 +278,7 @@ type TimepointRowProps = {
   isActive: boolean;
   isHighlighted?: boolean;
   highlightAccentColor?: string;
+  anchorAt: string;
   resolvedAt: Date;
   mode: OffsetMode;
   displayOffsetMinutes: number;
@@ -310,6 +314,7 @@ export function TimepointRow({
   isActive,
   isHighlighted = false,
   highlightAccentColor,
+  anchorAt,
   resolvedAt,
   mode,
   displayOffsetMinutes,
@@ -377,6 +382,7 @@ export function TimepointRow({
   const [relativeToPickerOpen, setRelativeToPickerOpen] = useState(false);
   const [relativeToMenuLevel, setRelativeToMenuLevel] = useState<"first" | "specific">("first");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dateLabelRevealed, setDateLabelRevealed] = useState(false);
   const [relativeToPickerAnchorEl, setRelativeToPickerAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [relativeToSpecificItemEl, setRelativeToSpecificItemEl] = useState<HTMLButtonElement | null>(null);
   const relativeToPickerPanelRef = useRef<HTMLDivElement>(null);
@@ -483,10 +489,35 @@ export function TimepointRow({
     }
   }, [hasScheduledTime]);
 
+  const showDateLabel = !isBootstrapPlaceholderAnchor(anchorAt);
+  const formattedDateLabel = showDateLabel ? format(resolvedAt, "EEEE, MMMM d") : null;
+
+  useEffect(() => {
+    if (!showDateLabel) {
+      setDateLabelRevealed(false);
+      return;
+    }
+
+    if (shouldReduceMotion) {
+      setDateLabelRevealed(true);
+      return;
+    }
+
+    let innerFrame = 0;
+    const outerFrame = requestAnimationFrame(() => {
+      innerFrame = requestAnimationFrame(() => {
+        setDateLabelRevealed(true);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outerFrame);
+      cancelAnimationFrame(innerFrame);
+    };
+  }, [showDateLabel, shouldReduceMotion]);
+
   const selectedStartTimeValue = format(resolvedAt, "HH:mm");
   const resolvedEndAt = addMinutes(resolvedAt, durationMinutes);
   const selectedEndTimeValue = format(resolvedEndAt, "HH:mm");
-  const formattedDateLabel = format(resolvedAt, "EEEE, MMMM d");
   const startTimeOptions = buildSingleTimeOptions(
     resolvedAt,
     hasScheduledTime ? selectedStartTimeValue : undefined,
@@ -1020,35 +1051,56 @@ export function TimepointRow({
               </div>
             </motion.div>
             )}
-            <div className="min-w-0 flex-1">
-            <div className="flex min-h-8 flex-nowrap items-center gap-0 text-sm font-normal" onClick={(event) => event.stopPropagation()}>
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                      className={cn(
-                        "h-8 w-fit shrink-0 justify-start whitespace-nowrap border-0 bg-transparent pl-1 pr-1 py-0 text-[13px] font-normal text-[#1e1e1a] shadow-none hover:bg-[#f0f0eb]",
-                      )}
-                    aria-label="Choose event day"
-                  >
-                    {formattedDateLabel}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-auto overflow-hidden rounded-[12px] !bg-white p-0"
-                  align="start"
-                  collisionPadding={8}
+            <div className="min-w-0">
+            <div className="flex min-h-8 flex-nowrap items-center justify-start gap-0 text-sm font-normal" onClick={(event) => event.stopPropagation()}>
+              <div
+                className={cn("t-skel h-8 shrink-0", dateLabelRevealed && "is-revealed")}
+                aria-busy={!dateLabelRevealed}
+              >
+                <span
+                  className="t-skel-size pl-1 pr-1 text-[13px] font-normal"
+                  aria-hidden
                 >
-                  <Calendar
-                    mode="single"
-                    selected={resolvedAt}
-                    defaultMonth={resolvedAt}
-                    onSelect={handleCalendarDateSelect}
-                    className="bg-white"
-                  />
-                </PopoverContent>
-              </Popover>
+                  {DATE_LABEL_SIZE_PLACEHOLDER}
+                </span>
+                <div
+                  className={cn(
+                    "t-skel-skeleton pl-1 pr-1",
+                    !dateLabelRevealed && "is-pulsing",
+                  )}
+                  aria-hidden
+                >
+                  <div className="h-[10px] w-full rounded-[3px] bg-[#e8e8e4]" />
+                </div>
+                <div className="t-skel-content pl-1 pr-1">
+                  {showDateLabel ? (
+                    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-full min-w-0 items-center justify-start whitespace-nowrap rounded-md border-0 bg-transparent py-0 text-left text-[13px] font-normal text-[#1e1e1a] shadow-none hover:bg-[#f0f0eb]"
+                          aria-label="Choose event day"
+                        >
+                          {formattedDateLabel}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-auto overflow-hidden rounded-[12px] !bg-white p-0"
+                        align="start"
+                        collisionPadding={8}
+                      >
+                        <Calendar
+                          mode="single"
+                          selected={resolvedAt}
+                          defaultMonth={resolvedAt}
+                          onSelect={handleCalendarDateSelect}
+                          className="bg-white"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : null}
+                </div>
+              </div>
               <div className="inline-flex h-8 shrink-0 items-center">
               <AnimatePresence initial={false} mode="popLayout">
                 {timeEntryActive ? (

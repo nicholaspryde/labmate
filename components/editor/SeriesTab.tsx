@@ -1,7 +1,6 @@
 "use client";
 
 import { useLayoutEffect, useRef, type RefObject } from "react";
-import { TextShimmer } from "@/components/motion-primitives/text-shimmer";
 import type { Series } from "@/lib/types";
 import { DISABLE_AUTOFILL_INPUT_PROPS } from "@/lib/autofill";
 import { cn } from "@/lib/utils";
@@ -12,7 +11,6 @@ type SeriesTabProps = {
   isActive: boolean;
   isEditing: boolean;
   showDelete?: boolean;
-  showPlaceholderShimmer?: boolean;
   tabRef?: RefObject<HTMLElement | null>;
   onActivate: () => void;
   onDelete: () => void;
@@ -26,7 +24,6 @@ export function SeriesTab({
   isActive,
   isEditing,
   showDelete = false,
-  showPlaceholderShimmer = false,
   tabRef,
   onActivate,
   onDelete,
@@ -37,18 +34,6 @@ export function SeriesTab({
   const hasName = item.name.trim().length > 0;
   const displayText = hasName ? item.name : placeholder;
   const sizerText = isEditing ? item.name || placeholder : displayText;
-  const shouldShimmerPlaceholder = showPlaceholderShimmer && !hasName;
-
-  const placeholderShimmer = (
-    <TextShimmer
-      as="span"
-      duration={1.5}
-      repeatDelay={4}
-      className="[--base-color:#a8adb5] [--base-gradient-color:#f4f4f0] group-hover:[--base-color:#8f959e]"
-    >
-      {placeholder}
-    </TextShimmer>
-  );
 
   useLayoutEffect(() => {
     if (!isEditing || !inputRef.current) {
@@ -84,40 +69,34 @@ export function SeriesTab({
       className={cn(
         "absolute inset-0 flex items-center transition-[opacity,color] duration-spring-moderate",
         isEditing ? "pointer-events-none opacity-0" : "opacity-100",
-        !hasName && !shouldShimmerPlaceholder && "text-[#a8adb5] group-hover:text-[#8f959e]",
+        !hasName && "text-[#a8adb5] group-hover:text-[#8f959e]",
       )}
     >
-      {shouldShimmerPlaceholder && !isEditing ? placeholderShimmer : displayText}
+      {displayText}
     </span>
   );
 
   const editContent = (
-    <>
-      <input
-        ref={inputRef}
-        value={item.name}
-        {...DISABLE_AUTOFILL_INPUT_PROPS}
-        onChange={(event) => onNameChange(event.target.value)}
-        onBlur={onFinishEdit}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === "Escape") {
-            event.preventDefault();
-            onFinishEdit();
-          }
-        }}
-        placeholder={shouldShimmerPlaceholder ? " " : placeholder}
-        aria-label={placeholder}
-        tabIndex={isEditing ? 0 : -1}
-        className={cn(
-          "absolute inset-0 w-full min-w-0 border-0 bg-transparent p-0 text-[16px] font-medium text-[#161616] outline-none transition-opacity duration-spring-moderate placeholder:text-[#a8adb5]",
-          shouldShimmerPlaceholder && "placeholder:text-transparent",
-          isEditing ? "opacity-100" : "pointer-events-none opacity-0",
-        )}
-      />
-      {shouldShimmerPlaceholder && isEditing ? (
-        <span className="pointer-events-none absolute inset-0 flex items-center">{placeholderShimmer}</span>
-      ) : null}
-    </>
+    <input
+      ref={inputRef}
+      value={item.name}
+      {...DISABLE_AUTOFILL_INPUT_PROPS}
+      onChange={(event) => onNameChange(event.target.value)}
+      onBlur={onFinishEdit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === "Escape") {
+          event.preventDefault();
+          onFinishEdit();
+        }
+      }}
+      placeholder={placeholder}
+      aria-label={placeholder}
+      tabIndex={isEditing ? 0 : -1}
+      className={cn(
+        "absolute inset-0 w-full min-w-0 border-0 bg-transparent p-0 text-[16px] font-medium text-[#161616] outline-none transition-opacity duration-spring-moderate placeholder:text-[#a8adb5]",
+        isEditing ? "opacity-100" : "pointer-events-none opacity-0",
+      )}
+    />
   );
 
   const deleteButton = (

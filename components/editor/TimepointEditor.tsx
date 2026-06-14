@@ -363,6 +363,7 @@ export function TimepointEditor({
                       : undefined
                   }
                   resolvedAt={resolved[index].resolvedAt}
+                  anchorAt={series.anchorAt}
                   mode={mode}
                   displayOffsetMinutes={computeDisplayOffsetMinutes(series, index, mode)}
                   authorOffsetMinutes={computeAuthorOffsetMinutes(series, index, mode)}

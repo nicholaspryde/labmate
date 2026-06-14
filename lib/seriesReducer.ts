@@ -85,7 +85,11 @@ function createSeries(name: string, color: string): Series {
 
 export const BOOTSTRAP_SERIES_ID = "00000000-0000-4000-a000-000000000001";
 export const BOOTSTRAP_TIMEPOINT_ID = "00000000-0000-4000-a000-000000000002";
-const BOOTSTRAP_PLACEHOLDER_ANCHOR_AT = "1970-01-01T14:00:00.000Z";
+export const BOOTSTRAP_PLACEHOLDER_ANCHOR_AT = "1970-01-01T14:00:00.000Z";
+
+export function isBootstrapPlaceholderAnchor(anchorAt: string): boolean {
+  return anchorAt === BOOTSTRAP_PLACEHOLDER_ANCHOR_AT;
+}
 
 function createBootstrapSeries(): Series {
   return {
