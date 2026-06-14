@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 const TOOLTIP_CONTENT_CLASS = "border-0 bg-[#161616] text-white";
 const DEFAULT_EXPORT_DURATION_MINUTES = 30;
 const EXPORT_SUCCESS_MS = 1200;
-const SERIES_NAME_PLACEHOLDER = "Series name";
+const SERIES_NAME_PLACEHOLDER = "Add series name";
 
 function seriesDisplayName(item: Series, placeholder: string): string {
   return item.name.trim() || placeholder;
