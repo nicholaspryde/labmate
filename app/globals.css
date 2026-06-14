@@ -47,6 +47,8 @@
   --shadow-6: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color), 0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px var(--shadow-color);
   --shadow-7: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color), 0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px var(--shadow-color), 0 48px 48px -24px var(--shadow-color);
   --shadow-8: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color), 0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px var(--shadow-color), 0 48px 48px -24px var(--shadow-color), 0 96px 96px -48px var(--shadow-color);
+  --color-link-underline: rgba(37, 37, 37, 0.3);
+  --ease-default: cubic-bezier(0.2, 0, 0.38, 0.9);
 }
 
 @theme inline {
@@ -529,6 +531,51 @@
     transform: none !important;
     transition: none !important;
     animation: none !important;
+  }
+
+  /* Inline text link — lift + underline darkening on hover */
+  .hover-link {
+    position: relative;
+    color: var(--color-black);
+    text-decoration: underline;
+    text-decoration-color: var(--color-link-underline);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 5px;
+  }
+
+  .hover-link::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    bottom: -6px;
+    left: -6px;
+  }
+
+  .hover-link span {
+    display: inline-block;
+    text-decoration: underline;
+    text-decoration-color: var(--color-link-underline);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 5px;
+    transition:
+      transform 0.2s var(--ease-default),
+      text-decoration-color 0.2s var(--ease-default);
+  }
+
+  .hover-link:hover span {
+    text-decoration-color: var(--color-black);
+    transform: translateY(-3px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hover-link span {
+      transition-duration: 0.01ms;
+    }
+
+    .hover-link:hover span {
+      transform: none;
+    }
   }
 }
 

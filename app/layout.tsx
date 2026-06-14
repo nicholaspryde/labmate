@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { DialRoot } from "dialkit";
-import { FeedbackButton } from "@/components/FeedbackButton";
+import { HelpButton } from "@/components/HelpButton";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 import "dialkit/styles.css";
@@ -34,7 +34,7 @@ export default function RootLayout({
         </div>
         <Providers>
           {children}
-          <FeedbackButton />
+          <HelpButton />
           <DialRoot />
         </Providers>
       </body>
