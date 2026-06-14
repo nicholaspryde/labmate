@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import { TextShimmer } from "@/components/motion-primitives/text-shimmer";
 import type { Series } from "@/lib/types";
+import { DISABLE_AUTOFILL_INPUT_PROPS } from "@/lib/autofill";
 import { cn } from "@/lib/utils";
 
 type SeriesTabProps = {
@@ -95,6 +96,7 @@ export function SeriesTab({
       <input
         ref={inputRef}
         value={item.name}
+        {...DISABLE_AUTOFILL_INPUT_PROPS}
         onChange={(event) => onNameChange(event.target.value)}
         onBlur={onFinishEdit}
         onKeyDown={(event) => {

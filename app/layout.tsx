@@ -29,6 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
+        <div aria-hidden className="pointer-events-none fixed h-0 w-0 overflow-hidden opacity-0">
+          <input type="text" name="labmate-prevent-autofill" tabIndex={-1} autoComplete="off" readOnly />
+        </div>
         <Providers>
           {children}
           <FeedbackButton />

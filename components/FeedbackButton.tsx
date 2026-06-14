@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DISABLE_AUTOFILL_INPUT_PROPS } from "@/lib/autofill";
 import { cn } from "@/lib/utils";
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -75,6 +76,7 @@ export function FeedbackButton() {
         <textarea
           id="feedback-message"
           value={message}
+          {...DISABLE_AUTOFILL_INPUT_PROPS}
           onChange={(event) => setMessage(event.target.value)}
           placeholder="What would make Labmate better?"
           rows={4}

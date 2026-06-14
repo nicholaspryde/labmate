@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DISABLE_AUTOFILL_INPUT_PROPS } from "@/lib/autofill";
 import { cn, HIGHLIGHTED_SURFACE_SHADOW, SURFACE_SHADOW, SURFACE_SHADOW_HOVER } from "@/lib/utils";
 import { spring } from "@/lib/springs";
 
@@ -1326,10 +1327,7 @@ export function TimepointRow({
                           value={description}
                           placeholder="Description..."
                           rows={1}
-                          autoComplete="off"
-                          data-1p-ignore=""
-                          data-lpignore="true"
-                          data-form-type="other"
+                          {...DISABLE_AUTOFILL_INPUT_PROPS}
                           className={cn(
                             "block min-h-8 w-full min-w-0 resize-none border-0 bg-transparent p-0 text-[12px] font-normal leading-8 shadow-none outline-none placeholder:text-[#a8adb5] focus-visible:ring-0 [field-sizing:content]",
                             description.trim() ? "text-[#1e1e1a]" : "text-[#a8adb5]",
