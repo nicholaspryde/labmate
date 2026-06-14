@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { useReducedMotion } from "motion/react";
 import { SeriesTab } from "@/components/editor/SeriesTab";
 import { buildIcs, triggerIcsDownload } from "@/lib/icsExport";
+import { BOOTSTRAP_SERIES_ID } from "@/lib/seriesReducer";
 import type { Series } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +62,7 @@ export function SeriesTabBar({
   const tabsMeasureRef = useRef<HTMLDivElement>(null);
   const [tabsOverflow, setTabsOverflow] = useState(false);
   const [addSeriesWidth, setAddSeriesWidth] = useState(0);
+  const [bootstrapPlaceholderShimmer, setBootstrapPlaceholderShimmer] = useState(true);
   const shouldReduceMotion = useReducedMotion();
 
   const hasAdditionalEvents = (activeSeries?.timepoints.length ?? 0) > 1;
@@ -188,6 +190,12 @@ export function SeriesTabBar({
     }, EXPORT_SUCCESS_MS);
   };
 
+  const dismissBootstrapPlaceholderShimmer = (seriesId: string) => {
+    if (seriesId === BOOTSTRAP_SERIES_ID) {
+      setBootstrapPlaceholderShimmer(false);
+    }
+  };
+
   const seriesTabs = allSeries.map((item) => (
     <SeriesTab
       key={item.id}
@@ -199,12 +207,21 @@ export function SeriesTabBar({
       isActive={item.id === activeSeriesId}
       isEditing={editingSeriesId === item.id}
       showDelete={allSeries.length > 1}
+      showPlaceholderShimmer={
+        item.id === BOOTSTRAP_SERIES_ID && bootstrapPlaceholderShimmer && !shouldReduceMotion
+      }
       onActivate={() => {
         onSetActiveSeries(item.id);
         setEditingSeriesId(item.id);
       }}
-      onNameChange={(name) => onSeriesNameChange(item.id, name)}
-      onFinishEdit={() => setEditingSeriesId(null)}
+      onNameChange={(name) => {
+        dismissBootstrapPlaceholderShimmer(item.id);
+        onSeriesNameChange(item.id, name);
+      }}
+      onFinishEdit={() => {
+        dismissBootstrapPlaceholderShimmer(item.id);
+        setEditingSeriesId(null);
+      }}
       onDelete={() => handleDeleteSeriesRequest(item.id)}
     />
   ));

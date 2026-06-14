@@ -73,7 +73,7 @@ type EventChipProps = {
 
 function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChipProps) {
   const { view } = useIlamyCalendarContext();
-  const titleRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLSpanElement>(null);
   const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const eventData = event.data as CalendarEventData | undefined;
@@ -158,9 +158,9 @@ function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChi
           >
             <div className="calendar-event-chip__primary">
               <span className="calendar-event-chip__dot" aria-hidden />
-              <div ref={titleRef} className="calendar-event-chip__title">
+              <span ref={titleRef} className="calendar-event-chip__title">
                 {fullName}
-              </div>
+              </span>
             </div>
             {timeLabel ? (
               <div className="calendar-event-chip__time">{timeLabel}</div>

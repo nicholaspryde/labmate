@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, type RefObject } from "react";
+import { TextShimmer } from "@/components/motion-primitives/text-shimmer";
 import type { Series } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,7 @@ type SeriesTabProps = {
   isActive: boolean;
   isEditing: boolean;
   showDelete?: boolean;
+  showPlaceholderShimmer?: boolean;
   tabRef?: RefObject<HTMLElement | null>;
   onActivate: () => void;
   onDelete: () => void;
@@ -23,6 +25,7 @@ export function SeriesTab({
   isActive,
   isEditing,
   showDelete = false,
+  showPlaceholderShimmer = false,
   tabRef,
   onActivate,
   onDelete,
@@ -33,6 +36,17 @@ export function SeriesTab({
   const hasName = item.name.trim().length > 0;
   const displayText = hasName ? item.name : placeholder;
   const sizerText = isEditing ? item.name || placeholder : displayText;
+  const shouldShimmerPlaceholder = showPlaceholderShimmer && !hasName;
+
+  const placeholderShimmer = (
+    <TextShimmer
+      as="span"
+      duration={4}
+      className="[--base-color:#a8adb5] [--base-gradient-color:#f4f4f0]"
+    >
+      {placeholder}
+    </TextShimmer>
+  );
 
   useLayoutEffect(() => {
     if (!isEditing || !inputRef.current) {
@@ -68,33 +82,39 @@ export function SeriesTab({
       className={cn(
         "absolute inset-0 flex items-center transition-opacity duration-spring-moderate",
         isEditing ? "pointer-events-none opacity-0" : "opacity-100",
-        !hasName && "text-[#a8adb5]",
+        !hasName && !shouldShimmerPlaceholder && "text-[#a8adb5]",
       )}
     >
-      {displayText}
+      {shouldShimmerPlaceholder && !isEditing ? placeholderShimmer : displayText}
     </span>
   );
 
   const editContent = (
-    <input
-      ref={inputRef}
-      value={item.name}
-      onChange={(event) => onNameChange(event.target.value)}
-      onBlur={onFinishEdit}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === "Escape") {
-          event.preventDefault();
-          onFinishEdit();
-        }
-      }}
-      placeholder={placeholder}
-      aria-label={placeholder}
-      tabIndex={isEditing ? 0 : -1}
-      className={cn(
-        "absolute inset-0 w-full min-w-0 border-0 bg-transparent p-0 text-[16px] font-medium text-[#161616] outline-none transition-opacity duration-spring-moderate placeholder:text-[#a8adb5]",
-        isEditing ? "opacity-100" : "pointer-events-none opacity-0",
-      )}
-    />
+    <>
+      <input
+        ref={inputRef}
+        value={item.name}
+        onChange={(event) => onNameChange(event.target.value)}
+        onBlur={onFinishEdit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === "Escape") {
+            event.preventDefault();
+            onFinishEdit();
+          }
+        }}
+        placeholder={shouldShimmerPlaceholder ? " " : placeholder}
+        aria-label={placeholder}
+        tabIndex={isEditing ? 0 : -1}
+        className={cn(
+          "absolute inset-0 w-full min-w-0 border-0 bg-transparent p-0 text-[16px] font-medium text-[#161616] outline-none transition-opacity duration-spring-moderate placeholder:text-[#a8adb5]",
+          shouldShimmerPlaceholder && "placeholder:text-transparent",
+          isEditing ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+      />
+      {shouldShimmerPlaceholder && isEditing ? (
+        <span className="pointer-events-none absolute inset-0 flex items-center">{placeholderShimmer}</span>
+      ) : null}
+    </>
   );
 
   const deleteButton = (
