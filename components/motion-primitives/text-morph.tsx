@@ -1,5 +1,6 @@
 'use client';
 import { cn } from '@/lib/utils';
+import { spring } from '@/lib/springs';
 import { AnimatePresence, motion, Transition, Variants } from 'motion/react';
 import { useMemo, useId } from 'react';
 
@@ -42,12 +43,7 @@ export function TextMorph({
     exit: { opacity: 0 },
   };
 
-  const defaultTransition: Transition = {
-    type: 'spring',
-    stiffness: 280,
-    damping: 18,
-    mass: 0.3,
-  };
+  const defaultTransition: Transition = spring.fast;
 
   return (
     <Component className={cn(className)} aria-label={children} style={style}>

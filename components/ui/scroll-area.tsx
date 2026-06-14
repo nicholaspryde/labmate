@@ -164,20 +164,20 @@ const ScrollBar = forwardRef<
       ref={ref}
       orientation={orientation}
       data-slot="scroll-area-scrollbar"
-      // Scrollbar show/hide is plain CSS opacity matching the cue fade —
-      // 160ms in, 120ms out (exits faster, per the animation guidelines);
-      // spring tokens are framer-motion configs and don't apply here.
+      // Scrollbar show/hide is plain CSS opacity matching spring tiers —
+      // moderate enter (160ms), moderate exit (120ms); spring tokens are
+      // framer-motion configs and don't apply here.
       className={cn(
         // The 10px track stays as a comfortable hit target; the thumb inside
         // it rests narrow and low-contrast, then widens + darkens on hover so
         // it gets out of the way until you reach for it.
         "group/scrollbar z-20 flex touch-none select-none",
-        // Show immediately; on hide, wait out the 150ms thumb shrink before
+        // Show immediately; on hide, wait out the thumb shrink before
         // fading so the thumb visibly narrows back first instead of the fade
         // masking it.
-        "transition-opacity duration-120 ease-out data-[state=visible]:duration-160",
+        "transition-opacity duration-spring-moderate-exit ease-out data-[state=visible]:duration-spring-moderate",
         "data-[state=visible]:opacity-100 data-[state=hidden]:opacity-0",
-        "data-[state=hidden]:delay-160 data-[state=visible]:delay-0",
+        "data-[state=hidden]:delay-[var(--duration-spring-moderate)] data-[state=visible]:delay-0",
         orientation === "vertical" && "h-full w-2.5",
         orientation === "horizontal" && "h-2.5 w-full flex-col",
         className
@@ -187,7 +187,7 @@ const ScrollBar = forwardRef<
       <ScrollAreaPrimitive.ScrollAreaThumb
         data-slot="scroll-area-thumb"
         className={cn(
-          "relative bg-foreground/25 transition-[background-color,width,height] duration-160 ease-in-out",
+          "relative bg-foreground/25 transition-[background-color,width,height] duration-spring-moderate ease-in-out",
           "group-hover/scrollbar:bg-foreground/45 active:!bg-foreground/60",
           shape.bg,
           orientation === "vertical" &&

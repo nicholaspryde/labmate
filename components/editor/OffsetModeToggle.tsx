@@ -71,7 +71,7 @@ export function OffsetModeToggle({ value, onChange }: OffsetModeToggleProps) {
                 aria-checked={isSelected}
                 onClick={() => handleSelect(option.value)}
                 className={cn(
-                  "flex cursor-pointer flex-col items-start rounded-[10px] border px-3 py-2.5 text-left transition-colors duration-150",
+                  "flex cursor-pointer flex-col items-start rounded-[10px] border px-3 py-2.5 text-left transition-colors duration-spring-moderate",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004cff]/40 focus-visible:ring-offset-1",
                   isSelected
                     ? "border-[#004cff] bg-[#dfe8ff]"

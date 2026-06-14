@@ -106,7 +106,7 @@ export function TimepointCalendarApp() {
                 dispatch({ type: "set-series-name", seriesId, name })
               }
             />
-            <div className="grid min-h-0 flex-1 gap-x-6 gap-y-4 pt-[12px] pb-[12px] lg:grid-cols-[460px_1fr]">
+            <div className="grid min-h-0 flex-1 gap-x-6 gap-y-4 pt-[2px] pb-[12px] lg:grid-cols-[460px_1fr]">
             <div className="flex min-h-0 flex-col">
             <TimepointEditor
               series={activeSeries}

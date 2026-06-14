@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, HIGHLIGHTED_SURFACE_SHADOW, SURFACE_SHADOW, SURFACE_SHADOW_HOVER } from "@/lib/utils";
+import { spring } from "@/lib/springs";
 
 function formatRelativeReferenceReadout(
   relativeToMode: "default" | "previous" | "specific",
@@ -189,21 +190,6 @@ function RelativePickerCheck({ selected }: { selected: boolean }) {
     </span>
   );
 }
-
-const fieldRevealOpacityTransition = {
-  duration: 0.14,
-  ease: [0.33, 1, 0.68, 1] as const,
-};
-
-const fieldRevealTransition = {
-  height: { duration: 0.18, ease: [0.33, 1, 0.68, 1] as const },
-  opacity: fieldRevealOpacityTransition,
-};
-
-const optimizeValueTransition = {
-  duration: 0.32,
-  ease: [0.33, 1, 0.68, 1] as const,
-};
 
 function closestTimeSlotValue(reference = new Date()): string {
   const totalMinutes = reference.getHours() * 60 + reference.getMinutes();
@@ -518,7 +504,7 @@ export function TimepointRow({
       ? filterTimeOptions(endTimeOptions, endTimeInput)
       : endTimeOptions;
   const timeFieldClassName = cn(
-    "h-8 w-auto min-w-[3rem] rounded-[4px] border-0 bg-white px-1 py-0 text-left text-[14px] font-normal shadow-none transition-colors duration-150 hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0",
+    "h-8 w-auto min-w-[3rem] rounded-[4px] border-0 bg-white px-1 py-0 text-left text-[14px] font-normal shadow-none transition-colors duration-spring-moderate hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0",
     "text-[#161616]",
   );
   const defaultStartScrollValue = closestTimeSlotValue();
@@ -714,7 +700,7 @@ export function TimepointRow({
       data-timepoint-id={id}
     >
       <div
-        className="rounded-[8px] bg-white transition-[box-shadow] duration-150 ease-out"
+        className="rounded-[8px] bg-white transition-[box-shadow] duration-spring-moderate ease-out"
         style={{
           boxShadow: isHighlighted
             ? HIGHLIGHTED_SURFACE_SHADOW
@@ -726,7 +712,7 @@ export function TimepointRow({
         onMouseEnter={() => setIsSurfaceHovered(true)}
         onMouseLeave={() => setIsSurfaceHovered(false)}
       >
-        <div className="timepoint-event-card group overflow-hidden rounded-[8px] border-0 p-3 transition-colors duration-150">
+        <div className="timepoint-event-card group overflow-hidden rounded-[8px] border-0 p-3 transition-colors duration-spring-moderate">
       <motion.div
         className="relative"
         initial={
@@ -736,8 +722,8 @@ export function TimepointRow({
         }
         animate={{ opacity: 1, y: 0 }}
         transition={{
-          y: { type: "spring", visualDuration: 0.42, bounce: 0 },
-          opacity: { type: "spring", visualDuration: 0.38, bounce: 0 },
+          y: spring.slow,
+          opacity: spring.moderate,
         }}
       >
         {onDelete && (
@@ -745,7 +731,7 @@ export function TimepointRow({
             type="button"
             aria-label="Delete timepoint"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="pointer-events-none absolute right-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
+            className="pointer-events-none absolute right-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -767,7 +753,7 @@ export function TimepointRow({
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
             placeholder={isAnchor ? "Add first event name" : "Add event name"}
-            className="h-8 min-w-0 w-full border-0 bg-transparent px-1 py-0 text-[15px] font-normal text-[#161616]/70 shadow-none transition-colors duration-150 ease-[cubic-bezier(0.33,1,0.68,1)] hover:text-[#161616] focus:text-[#161616] focus-visible:ring-0 placeholder:text-[#a8adb5] hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color_150ms_cubic-bezier(0.33,1,0.68,1)]"
+            className="h-8 min-w-0 w-full border-0 bg-transparent px-1 py-0 text-[15px] font-normal text-[#161616]/70 shadow-none transition-colors duration-spring-moderate ease-out hover:text-[#161616] focus:text-[#161616] focus-visible:ring-0 placeholder:text-[#a8adb5] hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color] [&::placeholder]:duration-spring-moderate [&::placeholder]:ease-out"
             onFocus={onFocus}
             aria-label={isAnchor ? "Add first event name" : "Add event name"}
           />
@@ -782,7 +768,7 @@ export function TimepointRow({
                   ? { opacity: [1, 0.55, 1] }
                   : { opacity: 1 }
               }
-              transition={optimizeValueTransition}
+              transition={spring.slow}
               onAnimationComplete={() => setRelativeDatesPulseActive(false)}
             >
               <Plus className="h-3.5 w-3.5 shrink-0 mr-[9px] mt-[9px] text-[#a8adb5]" aria-hidden />
@@ -1063,8 +1049,8 @@ export function TimepointRow({
                     className="group/time inline-flex items-center whitespace-nowrap"
                     initial={shouldReduceMotion ? false : { opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0 }}
-                    transition={fieldRevealOpacityTransition}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, transition: spring.moderate.exit }}
+                    transition={spring.moderate}
                   >
                   <span className="px-1 text-[14px] text-[#d4d4d0]">|</span>
                   <div ref={setStartTimeAnchorEl} className="relative h-8 w-fit">
@@ -1251,7 +1237,7 @@ export function TimepointRow({
                     <button
                       type="button"
                       aria-label="Remove time"
-                      className="ml-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-150 hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover/time:opacity-100 focus-visible:opacity-100"
+                      className="ml-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover/time:opacity-100 focus-visible:opacity-100"
                       onClick={(event) => {
                         event.stopPropagation();
                         clearScheduledTime();
@@ -1266,8 +1252,8 @@ export function TimepointRow({
                     key="time-trigger"
                     initial={shouldReduceMotion ? false : { opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0 }}
-                    transition={fieldRevealOpacityTransition}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, transition: spring.moderate.exit }}
+                    transition={spring.moderate}
                   >
                 <button
                   type="button"
@@ -1302,8 +1288,15 @@ export function TimepointRow({
                       : { opacity: 0, height: 0 }
                   }
                   animate={{ opacity: 1, height: "auto" }}
-                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-                  transition={fieldRevealTransition}
+                  exit={
+                    shouldReduceMotion
+                      ? { opacity: 0 }
+                      : { opacity: 0, height: 0, transition: spring.moderate.exit }
+                  }
+                  transition={{
+                    height: spring.moderate,
+                    opacity: spring.moderate,
+                  }}
                   style={{ overflow: "hidden" }}
                 >
                   <div className="flex items-start pt-1">

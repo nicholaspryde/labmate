@@ -107,6 +107,13 @@
   --shadow-2: var(--shadow-2);
   --shadow-1: var(--shadow-1);
   --color-shadow-color: var(--shadow-color);
+
+  --duration-spring-fast: 80ms;
+  --duration-spring-fast-exit: 60ms;
+  --duration-spring-moderate: 160ms;
+  --duration-spring-moderate-exit: 120ms;
+  --duration-spring-slow: 240ms;
+  --duration-spring-slow-exit: 160ms;
 }
 
 @layer base {
@@ -169,7 +176,8 @@
     overflow: hidden;
     box-shadow: var(--surface-edge-inset);
     cursor: grab;
-    transition: box-shadow 120ms ease-out, background-color 120ms ease-out;
+    transition: box-shadow var(--duration-spring-moderate-exit) ease-out,
+      background-color var(--duration-spring-moderate-exit) ease-out;
   }
 
   .calendar-event-chip:active {
@@ -485,7 +493,7 @@
 
 /* Transitions.dev — Icon swap */
 .t-icon-swap {
-  --icon-swap-dur: 200ms;
+  --icon-swap-dur: var(--duration-spring-moderate);
   --icon-swap-blur: 2px;
   --icon-swap-start-scale: 0.25;
   --icon-swap-ease: ease-in-out;

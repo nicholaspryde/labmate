@@ -217,7 +217,7 @@ export function SeriesTabBar({
       aria-label="Add series"
       className="relative inline-flex shrink-0 items-center pb-2.5 pt-1"
     >
-      <span className="inline-flex items-center rounded-[12px] px-1.5 py-0.5 text-[12px] font-medium tracking-[0.16px] text-[#161616] transition-colors duration-150 hover:bg-[#f0f0eb] hover:text-[#161616]">
+      <span className="inline-flex items-center rounded-[12px] px-1.5 py-0.5 text-[12px] font-medium tracking-[0.16px] text-[#6b6b74] transition-colors duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#161616]">
         + Series
       </span>
     </button>

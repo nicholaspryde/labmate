@@ -9,16 +9,12 @@ import {
   shouldOfferWeekendAvoidance,
 } from "@/lib/timepointMath";
 import type { Series } from "@/lib/types";
+import { spring } from "@/lib/springs";
 
 type AvoidWeekendsButtonProps = {
   series: Series;
   onApply: (deltaDays: number) => void;
   onMessage?: (message: string) => void;
-};
-
-const optimizeRevealTransition = {
-  duration: 0.2,
-  ease: [0.33, 1, 0.68, 1] as const,
 };
 
 export function formatOptimizeToast(
@@ -70,8 +66,12 @@ export function AvoidWeekendsButton({ series, onApply, onMessage }: AvoidWeekend
           layout
           initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96, x: 6 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
-          exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, x: 6 }}
-          transition={optimizeRevealTransition}
+          exit={
+            shouldReduceMotion
+              ? { opacity: 0 }
+              : { opacity: 0, scale: 0.96, x: 6, transition: spring.moderate.exit }
+          }
+          transition={spring.moderate}
           className="ml-auto"
         >
           <Button

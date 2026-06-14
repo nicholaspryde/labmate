@@ -30,11 +30,11 @@ import {
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { spring } from "@/lib/springs";
 
 const OPTIMIZE_MESSAGE_MS = 5000;
 const TOOLTIP_CONTENT_CLASS = "border-0 bg-[#161616] text-white";
 const ADD_EVENT_PRESS_SCALE = 0.985;
-const ADD_EVENT_PRESS_TRANSITION = { type: "spring", visualDuration: 0.18, bounce: 0.12 } as const;
 const MotionButton = motion.create(Button);
 
 type TimepointEditorProps = {
@@ -337,8 +337,12 @@ export function TimepointEditor({
               key={optimizeMessage}
               initial={shouldReduceMotion ? false : { opacity: 0, y: -8, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.96 }}
-              transition={{ duration: 0.2, ease: [0.33, 1, 0.68, 1] }}
+              exit={
+                shouldReduceMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, y: -8, scale: 0.96, transition: spring.moderate.exit }
+              }
+              transition={spring.moderate}
               className="pointer-events-none absolute inset-x-0 top-1 z-10 flex justify-center px-3"
               role="status"
               aria-live="polite"
@@ -431,7 +435,7 @@ export function TimepointEditor({
           key={addAnimationKey}
           initial={addAnimationKey > 0 && !shouldReduceMotion ? { y: -8 } : false}
           animate={{ y: 0 }}
-          transition={{ type: "spring", visualDuration: 0.42, bounce: 0 }}
+          transition={spring.slow}
           style={{ willChange: "transform" }}
         >
           <MotionButton
@@ -439,14 +443,14 @@ export function TimepointEditor({
             variant="ghost"
             data-add-timepoint-button
             className={cn(
-              "h-12 w-full cursor-pointer gap-2 rounded-[12px] bg-[#f0f0eb] text-[12px] font-medium tracking-[0.16px] text-[#161616] transition-colors duration-100 hover:bg-[#e8e8e4] hover:text-[#161616] active:bg-[#e8e8e4]",
+              "h-12 w-full cursor-pointer gap-2 rounded-[12px] bg-[#f0f0eb] text-[12px] font-medium tracking-[0.16px] text-[#161616] transition-colors duration-spring-fast hover:bg-[#e8e8e4] hover:text-[#161616] active:bg-[#e8e8e4]",
               isAddTimepointPressed && "bg-[#e8e8e4]",
             )}
             animate={
               shouldReduceMotion ? undefined : { scale: isAddTimepointPressed ? ADD_EVENT_PRESS_SCALE : 1 }
             }
             whileTap={shouldReduceMotion ? undefined : { scale: ADD_EVENT_PRESS_SCALE }}
-            transition={ADD_EVENT_PRESS_TRANSITION}
+            transition={spring.moderate}
             onClick={handleAddTimepoint}
           >
             + Add event

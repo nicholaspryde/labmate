@@ -8,6 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { springCss } from "@/lib/springs";
 
 type ShapeVariant = "pill" | "rounded";
 
@@ -81,7 +82,7 @@ function transitionShape(callback: () => void) {
   root.classList.add("transitioning");
   void root.offsetHeight;
   callback();
-  setTimeout(() => root.classList.remove("transitioning"), 200);
+  setTimeout(() => root.classList.remove("transitioning"), springCss.moderate.enter);
 }
 
 function ShapeProvider({

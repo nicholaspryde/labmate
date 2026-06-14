@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from "react";
 import { useSurface } from "@/lib/surface-context";
+import { springOpacityTransition } from "@/lib/springs";
 
 // ---------------------------------------------------------------------------
 // Scroll-edge primitives
@@ -176,8 +177,8 @@ export function ScrollEdgeCue({
         {
           position: "absolute",
           opacity: visible ? 1 : 0,
-          // Exit slightly faster than enter, per the animation guidelines.
-          transition: `opacity ${visible ? 160 : 120}ms ease`,
+          // Exit slightly faster than enter, per the spring tier guidelines.
+          transition: springOpacityTransition(visible),
           ...(mode === "sticky"
             ? vertical
               ? { left: -inset, right: -inset, [edge]: -inset, height: sizePx }

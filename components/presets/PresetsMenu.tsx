@@ -73,7 +73,7 @@ export function PresetsMenu({ series, offsetMode, onApplyPreset }: PresetsMenuPr
                 <button
                   type="button"
                   aria-label={`Delete ${preset.name}`}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:opacity-100 group-focus:opacity-100"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:opacity-100 group-focus:opacity-100"
                   onPointerDown={(event) => event.preventDefault()}
                   onClick={(event) => {
                     event.stopPropagation();
