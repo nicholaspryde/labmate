@@ -248,7 +248,7 @@ export function SeriesTabBar({
               }
               viewportClassName="[&>div]:!block"
             >
-              <div className="flex w-max min-w-0 items-end gap-3">
+              <div className="flex w-max min-w-0 items-end gap-6">
                 <div ref={tabsMeasureRef} className="flex items-end gap-3">
                   {seriesTabs}
                 </div>

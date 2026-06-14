@@ -50,7 +50,7 @@ export function PresetsMenu({ series, offsetMode, onApplyPreset }: PresetsMenuPr
     <>
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="toolbar">
+          <Button type="button" variant="toolbar" className="text-[#6b6b74]">
             Presets
             <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" aria-hidden />
           </Button>

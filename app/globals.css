@@ -158,9 +158,7 @@
 }
 
 @layer components {
-  /* Event chip styled to the Figma spec. Per-event accent supplied via --event-accent.
-     The `!important` on border-left wins against the grid-line border-color override
-     defined below (which targets descendants of `calendar-body`). */
+  /* Event chip styled to the Figma spec. Per-event accent supplied via --event-accent. */
   .calendar-event-chip {
     --event-accent: #6c96ff;
     display: flex;
@@ -170,14 +168,34 @@
     width: 100%;
     padding: 8px 12px;
     border-radius: 2px;
-    border-left: 4px solid var(--event-accent) !important;
-    background-color: color-mix(in srgb, var(--event-accent) 22%, white);
+    background-color: color-mix(in srgb, var(--event-accent) 12%, white);
     color: color-mix(in srgb, var(--event-accent) 70%, #000 30%);
     overflow: hidden;
     box-shadow: var(--surface-edge-inset);
     cursor: grab;
     transition: box-shadow var(--duration-spring-moderate-exit) ease-out,
       background-color var(--duration-spring-moderate-exit) ease-out;
+  }
+
+  .calendar-event-chip__dot {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--event-accent);
+  }
+
+  .calendar-event-chip__primary {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .calendar-event-chip:not(.calendar-event-chip--compact) .calendar-event-chip__dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 3px;
   }
 
   .calendar-event-chip:active {
@@ -198,9 +216,18 @@
     font-weight: 500 !important;
     line-height: 1 !important;
     box-shadow: var(--surface-edge-outer) !important;
-    background-color: color-mix(in srgb, var(--calendar-drag-accent, #6c96ff) 22%, white) !important;
-    border-left: 3px solid var(--calendar-drag-accent, #6c96ff) !important;
+    background-color: color-mix(in srgb, var(--calendar-drag-accent, #6c96ff) 12%, white) !important;
     color: color-mix(in srgb, var(--calendar-drag-accent, #6c96ff) 70%, #000 30%) !important;
+    gap: 6px !important;
+  }
+
+  [data-testid="ilamy-calendar"] div.bg-amber-200.cursor-grab::before {
+    content: "";
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--calendar-drag-accent, #6c96ff);
   }
 
   /* Hide the in-place chip while dragging; the styled overlay follows the cursor. */
@@ -209,14 +236,13 @@
   }
 
   /* Compact variant for month / year views: single-line row that fits inside a
-     ~22px tall slot — accent | time | title. */
+     ~20px tall slot — dot | time | title. */
   .calendar-event-chip--compact {
     flex-direction: row;
     align-items: center;
     gap: 6px;
     padding: 0 8px;
     border-radius: 3px;
-    border-left-width: 3px !important;
   }
 
   .calendar-event-chip--compact .calendar-event-chip__title {
@@ -243,7 +269,7 @@
   /* Highlighted state: triggered when the user hovers the matching timepoint
      row in the editor (or a sibling chip). */
   .calendar-event-chip--highlighted {
-    background-color: color-mix(in srgb, var(--event-accent) 32%, white);
+    background-color: color-mix(in srgb, var(--event-accent) 18%, white);
     box-shadow:
       var(--surface-edge-inset),
       0 0 0 1px color-mix(in srgb, var(--event-accent) 60%, transparent),
@@ -254,7 +280,7 @@
      `<div class="absolute">` directly around our `.calendar-event-chip`.
      We lift the shadow up to this wrapper so the entire event reads as one
      elevated card. The chip itself keeps `overflow: hidden` so its rounded
-     left-border accent stays clipped; the shadow sits outside that clip. */
+     corners stay clipped; the shadow sits outside that clip. */
   [data-testid="ilamy-calendar"] .absolute:has(> .calendar-event-chip) {
     border-radius: 2px;
     box-shadow: var(--surface-edge-outer);
@@ -269,7 +295,7 @@
   }
 
   /* Month view event wrapper. Each event is positioned absolutely inside a
-     `[data-testid^="horizontal-event-"]` wrapper (24px height by default).
+     `[data-testid^="horizontal-event-"]` wrapper (~20px height with current settings).
      Drop the heavy default `shadow` from the inner ilamy `<motion.div>` and
      give the row a thin radius so our chip's rounded edge isn't clipped by
      a square wrapper. The tight visual elevation in month view comes from
@@ -277,7 +303,13 @@
   [data-testid="ilamy-calendar"] [data-testid^="horizontal-event-"] {
     border-radius: 3px;
     overflow: hidden;
-    box-shadow: var(--surface-edge-outer);
+    box-shadow: none;
+  }
+
+  /* Month view: nudge event rows below the day-number circle (overlay uses a
+     fixed dayNumberHeight; a little extra clearance avoids chip/circle overlap). */
+  [data-testid="ilamy-calendar"] [data-testid="horizontal-grid-body"] [data-testid^="horizontal-event-"] {
+    translate: 0 2px;
   }
 
   [data-testid="ilamy-calendar"] [data-testid^="horizontal-event-"] > .shadow {
@@ -287,6 +319,8 @@
   }
 
   .calendar-event-chip__title {
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 14px;
     font-weight: 500;
     line-height: 1.2;
@@ -304,6 +338,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     text-transform: lowercase;
+  }
+
+  .calendar-event-chip:not(.calendar-event-chip--compact) .calendar-event-chip__time {
+    padding-left: 14px;
   }
 
   /* Soften ilamy calendar's default grid and typography to match the Figma surface.
@@ -446,7 +484,10 @@
     font-size: 12px;
     font-weight: 500;
     line-height: 1;
-    margin: 4px 4px 2px auto !important;
+    align-self: flex-start;
+    /* Keep left inset only — vertical margins push the today circle below
+       ilamy's event overlay offset (dayNumberHeight 24px + cell p-1). */
+    margin: 0 0 0 4px !important;
   }
 
   [data-testid="ilamy-calendar"] [data-testid="day-number-today"] {

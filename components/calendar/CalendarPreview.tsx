@@ -11,6 +11,7 @@ import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { formatCalendarPreviewLabel, type CalendarEventData } from "@/lib/calendarMapping";
 import { dayDeltaFromDates } from "@/lib/timepointMath";
 import { cn, SURFACE_SHADOW } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export type CalendarEventDayChange = {
   seriesId: string;
@@ -31,6 +32,19 @@ type CalendarPreviewProps = {
 const DEFAULT_ACCENT = "#6c96ff";
 /** ilamy entrance stagger (0.05s × ~7) + 0.2s motion duration */
 const CALENDAR_ENTRANCE_MS = 400;
+const TOOLTIP_CONTENT_CLASS = "max-w-xs border-0 bg-[#161616] text-white";
+const EVENT_TOOLTIP_DELAY_MS = 500;
+
+function isTextTruncated(element: HTMLElement | null) {
+  if (!element) {
+    return false;
+  }
+
+  return (
+    element.scrollWidth > element.clientWidth + 1 ||
+    element.scrollHeight > element.clientHeight + 1
+  );
+}
 
 function CalendarFocusDateSync({ focusDate }: { focusDate: string | null }) {
   const { setCurrentDate } = useIlamyCalendarContext();
@@ -59,6 +73,9 @@ type EventChipProps = {
 
 function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChipProps) {
   const { view } = useIlamyCalendarContext();
+  const titleRef = useRef<HTMLElement>(null);
+  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const eventData = event.data as CalendarEventData | undefined;
   const accent = eventData?.accentColor ?? DEFAULT_ACCENT;
   const chipStyle: CSSProperties & Record<"--event-accent", string> = {
@@ -67,53 +84,94 @@ function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChi
   const timepointId = eventData?.timepointId;
   const timeLabel = eventData?.timeLabel;
   const previewTitle = eventData ? formatCalendarPreviewLabel(eventData) : event.title;
-  const titleOnly = eventData?.timepointName?.trim() || previewTitle;
+  const fullName =
+    eventData?.timepointName?.trim() || previewTitle || String(event.title);
   const isHighlighted =
     Boolean(timepointId) && timepointId === highlightedTimepointId;
   const isCompact = view === "month" || view === "year";
 
+  const clearTooltipTimer = () => {
+    if (tooltipTimerRef.current) {
+      clearTimeout(tooltipTimerRef.current);
+      tooltipTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => () => clearTooltipTimer(), []);
+
   const handleMouseEnter = () => {
     if (timepointId) onHoverTimepoint(timepointId);
-  };
-  const handleMouseLeave = () => onHoverTimepoint(null);
-  const tooltip = timeLabel ? `${previewTitle} (${timeLabel})` : previewTitle;
 
-  if (isCompact) {
-    return (
-      <div
-        className={cn(
-          "calendar-event-chip calendar-event-chip--compact",
-          isHighlighted && "calendar-event-chip--highlighted",
-        )}
-        style={chipStyle}
-        title={tooltip}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        {timeLabel ? (
-          <span className="calendar-event-chip__time">{timeLabel}</span>
-        ) : null}
-        <span className="calendar-event-chip__title">{titleOnly}</span>
-      </div>
-    );
-  }
+    clearTooltipTimer();
+    if (!isTextTruncated(titleRef.current)) {
+      return;
+    }
+
+    tooltipTimerRef.current = setTimeout(() => {
+      setTooltipOpen(true);
+    }, EVENT_TOOLTIP_DELAY_MS);
+  };
+
+  const handleMouseLeave = () => {
+    onHoverTimepoint(null);
+    clearTooltipTimer();
+    setTooltipOpen(false);
+  };
 
   return (
-    <div
-      className={cn(
-        "calendar-event-chip",
-        isHighlighted && "calendar-event-chip--highlighted",
-      )}
-      style={chipStyle}
-      title={tooltip}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+    <Tooltip
+      open={tooltipOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          setTooltipOpen(false);
+        }
+      }}
     >
-      <div className="calendar-event-chip__title">{previewTitle}</div>
-      {timeLabel ? (
-        <div className="calendar-event-chip__time">{timeLabel}</div>
-      ) : null}
-    </div>
+      <TooltipTrigger asChild>
+        {isCompact ? (
+          <div
+            className={cn(
+              "calendar-event-chip calendar-event-chip--compact",
+              isHighlighted && "calendar-event-chip--highlighted",
+            )}
+            style={chipStyle}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <span className="calendar-event-chip__dot" aria-hidden />
+            {timeLabel ? (
+              <span className="calendar-event-chip__time">{timeLabel}</span>
+            ) : null}
+            <span ref={titleRef} className="calendar-event-chip__title">
+              {fullName}
+            </span>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "calendar-event-chip",
+              isHighlighted && "calendar-event-chip--highlighted",
+            )}
+            style={chipStyle}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div className="calendar-event-chip__primary">
+              <span className="calendar-event-chip__dot" aria-hidden />
+              <div ref={titleRef} className="calendar-event-chip__title">
+                {fullName}
+              </div>
+            </div>
+            {timeLabel ? (
+              <div className="calendar-event-chip__time">{timeLabel}</div>
+            ) : null}
+          </div>
+        )}
+      </TooltipTrigger>
+      <TooltipContent side="top" align="start" className={TOOLTIP_CONTENT_CLASS}>
+        {fullName}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -276,10 +334,10 @@ function CalendarPreviewImpl({
             disableCellClick
             disableEventClick
             dayMaxEvents={4}
-            eventHeight={22}
+            eventHeight={20}
             eventSpacing={2}
             classesOverride={{
-              disabledCell: "bg-[#f6f5f2] text-[#cdcac5] pointer-events-none",
+              disabledCell: "bg-white text-[#cdcac5] pointer-events-none",
             }}
             onEventUpdate={handleEventUpdate}
             headerComponent={headerComponent}
