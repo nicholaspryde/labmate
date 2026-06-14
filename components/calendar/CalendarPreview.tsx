@@ -21,11 +21,16 @@ export type CalendarEventDayChange = {
   deltaDays: number;
 };
 
+export type TimepointHoverHighlight = {
+  timepointId: string;
+  accentColor: string;
+};
+
 type CalendarPreviewProps = {
   events: Parameters<typeof IlamyCalendar>[0]["events"];
   focusDate: string | null;
   highlightedTimepointId: string | null;
-  onHoverTimepoint: (timepointId: string | null) => void;
+  onHoverTimepoint: (highlight: TimepointHoverHighlight | null) => void;
   onEventDayChange: (change: CalendarEventDayChange) => void;
 };
 
@@ -68,7 +73,7 @@ function CalendarFocusDateSync({ focusDate }: { focusDate: string | null }) {
 type EventChipProps = {
   event: CalendarEvent;
   highlightedTimepointId: string | null;
-  onHoverTimepoint: (timepointId: string | null) => void;
+  onHoverTimepoint: (highlight: TimepointHoverHighlight | null) => void;
 };
 
 function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChipProps) {
@@ -100,7 +105,7 @@ function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChi
   useEffect(() => () => clearTooltipTimer(), []);
 
   const handleMouseEnter = () => {
-    if (timepointId) onHoverTimepoint(timepointId);
+    if (timepointId) onHoverTimepoint({ timepointId, accentColor: accent });
 
     clearTooltipTimer();
     if (!isTextTruncated(titleRef.current)) {

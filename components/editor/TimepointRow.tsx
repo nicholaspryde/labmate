@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DISABLE_AUTOFILL_INPUT_PROPS } from "@/lib/autofill";
-import { cn, HIGHLIGHTED_SURFACE_SHADOW, SURFACE_SHADOW, SURFACE_SHADOW_HOVER } from "@/lib/utils";
+import { cn, highlightedSurfaceShadow, SURFACE_SHADOW, SURFACE_SHADOW_HOVER } from "@/lib/utils";
 import { spring } from "@/lib/springs";
 
 function formatRelativeReferenceReadout(
@@ -274,6 +274,7 @@ type TimepointRowProps = {
   isAnchor: boolean;
   isActive: boolean;
   isHighlighted?: boolean;
+  highlightAccentColor?: string;
   resolvedAt: Date;
   mode: OffsetMode;
   displayOffsetMinutes: number;
@@ -308,6 +309,7 @@ export function TimepointRow({
   isAnchor,
   isActive,
   isHighlighted = false,
+  highlightAccentColor,
   resolvedAt,
   mode,
   displayOffsetMinutes,
@@ -707,7 +709,7 @@ export function TimepointRow({
         className="rounded-[8px] bg-white transition-[box-shadow] duration-spring-moderate ease-out"
         style={{
           boxShadow: isHighlighted
-            ? HIGHLIGHTED_SURFACE_SHADOW
+            ? highlightedSurfaceShadow(highlightAccentColor ?? "#004cff")
             : isSurfaceHovered || isActive
               ? SURFACE_SHADOW_HOVER
               : SURFACE_SHADOW,

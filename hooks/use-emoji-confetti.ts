@@ -26,20 +26,20 @@ type ConfettiParticle = {
 function createParticles(centerX: number, centerY: number): ConfettiParticle[] {
   return Array.from({ length: 42 }, () => {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 3.5 + Math.random() * 5;
+    const speed = 1.8 + Math.random() * 2.5;
 
     return {
       x: centerX,
       y: centerY,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 1.5,
+      vy: Math.sin(angle) * speed - 0.75,
       emoji: randomEmoji(),
-      size: 32 + Math.random() * 28,
+      size: 18 + Math.random() * 16,
       rot: (Math.random() - 0.5) * 0.15,
       rotV: (Math.random() - 0.5) * 0.02,
       gravity: 0.045 + Math.random() * 0.035,
       wobbleFreq: 1 + Math.random() * 1.2,
-      wobbleAmp: 0.15 + Math.random() * 0.25,
+      wobbleAmp: 0.08 + Math.random() * 0.12,
       t: Math.random() * Math.PI * 2,
       life: 1,
       decay: 0.0035 + Math.random() * 0.0035,

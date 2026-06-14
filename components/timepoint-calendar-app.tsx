@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useDeferredValue, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
-import { CalendarPreview } from "@/components/calendar/CalendarPreview";
+import { CalendarPreview, type TimepointHoverHighlight } from "@/components/calendar/CalendarPreview";
 import { SeriesTabBar } from "@/components/editor/SeriesTabBar";
 import { TimepointEditor } from "@/components/editor/TimepointEditor";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { BOOTSTRAP_SERIES_ID, initialState, nowAnchorIso, seriesReducer } from "
 
 export function TimepointCalendarApp() {
   const [state, dispatch] = useReducer(seriesReducer, initialState);
-  const [highlightedTimepointId, setHighlightedTimepointId] = useState<string | null>(null);
+  const [highlightedTimepoint, setHighlightedTimepoint] = useState<TimepointHoverHighlight | null>(null);
   const [optimizePulseKey, setOptimizePulseKey] = useState(0);
   const [isEditorScrolled, setIsEditorScrolled] = useState(false);
   const editorScrollRef = useRef<HTMLDivElement>(null);
@@ -114,7 +114,8 @@ export function TimepointCalendarApp() {
               scrollContainerRef={editorScrollRef}
               onScrollContainerScroll={(scrollTop) => setIsEditorScrolled(scrollTop > 6)}
               showTopBarFade={isEditorScrolled}
-              highlightedTimepointId={highlightedTimepointId}
+              highlightedTimepointId={highlightedTimepoint?.timepointId ?? null}
+              highlightedAccentColor={highlightedTimepoint?.accentColor ?? null}
               onModeChange={(mode) => dispatch({ type: "set-offset-mode", mode })}
               onAnchorDateTimeChange={(anchorAt) => {
                 if (!activeSeries) return;
@@ -227,8 +228,8 @@ export function TimepointCalendarApp() {
             <CalendarPreview
               events={calendarEvents}
               focusDate={activeSeries?.anchorAt ?? null}
-              highlightedTimepointId={highlightedTimepointId}
-              onHoverTimepoint={setHighlightedTimepointId}
+              highlightedTimepointId={highlightedTimepoint?.timepointId ?? null}
+              onHoverTimepoint={setHighlightedTimepoint}
               onEventDayChange={handleEventDayChange}
             />
             </div>

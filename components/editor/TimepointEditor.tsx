@@ -34,6 +34,7 @@ type TimepointEditorProps = {
   onScrollContainerScroll?: (scrollTop: number) => void;
   showTopBarFade?: boolean;
   highlightedTimepointId?: string | null;
+  highlightedAccentColor?: string | null;
   onModeChange: (mode: OffsetMode) => void;
   onAnchorDateTimeChange: (anchorAt: string) => void;
   onAddTimepoint: () => void;
@@ -59,6 +60,7 @@ export function TimepointEditor({
   onScrollContainerScroll,
   showTopBarFade = false,
   highlightedTimepointId = null,
+  highlightedAccentColor = null,
   onModeChange,
   onAnchorDateTimeChange,
   onAddTimepoint,
@@ -355,6 +357,11 @@ export function TimepointEditor({
                   isAnchor={index === 0}
                   isActive={activeTimepointId === timepoint.id}
                   isHighlighted={highlightedTimepointId === timepoint.id}
+                  highlightAccentColor={
+                    highlightedTimepointId === timepoint.id
+                      ? (highlightedAccentColor ?? series.color)
+                      : undefined
+                  }
                   resolvedAt={resolved[index].resolvedAt}
                   mode={mode}
                   displayOffsetMinutes={computeDisplayOffsetMinutes(series, index, mode)}
