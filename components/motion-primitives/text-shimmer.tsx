@@ -8,6 +8,7 @@ export type TextShimmerProps = {
   as?: React.ElementType;
   className?: string;
   duration?: number;
+  repeatDelay?: number;
   spread?: number;
 };
 
@@ -16,6 +17,7 @@ function TextShimmerComponent({
   as: Component = 'p',
   className,
   duration = 2,
+  repeatDelay = 0,
   spread = 2,
 }: TextShimmerProps) {
   const MotionComponent = motion.create(
@@ -40,6 +42,7 @@ function TextShimmerComponent({
       transition={{
         repeat: Infinity,
         duration,
+        repeatDelay,
         ease: 'linear',
       }}
       style={

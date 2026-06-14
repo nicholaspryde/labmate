@@ -4,7 +4,7 @@ import { Check, Download } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useReducedMotion } from "motion/react";
 import { SeriesTab } from "@/components/editor/SeriesTab";
-import { buildIcs, triggerIcsDownload } from "@/lib/icsExport";
+import { exportAllSeriesAsIcs } from "@/lib/icsExport";
 import { BOOTSTRAP_SERIES_ID } from "@/lib/seriesReducer";
 import type { Series } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,8 @@ export function SeriesTabBar({
   const [bootstrapPlaceholderShimmer, setBootstrapPlaceholderShimmer] = useState(true);
   const shouldReduceMotion = useReducedMotion();
 
-  const hasAdditionalEvents = (activeSeries?.timepoints.length ?? 0) > 1;
+  const hasAdditionalEvents = allSeries.some((series) => series.timepoints.length > 1);
+  const hasExportableSeries = allSeries.some((series) => series.timepoints.length > 0);
   const pendingDeleteSeries = deleteSeriesId
     ? (allSeries.find((item) => item.id === deleteSeriesId) ?? null)
     : null;
@@ -172,12 +173,11 @@ export function SeriesTabBar({
   };
 
   const handleExport = () => {
-    if (!activeSeries) {
+    if (!hasExportableSeries) {
       return;
     }
 
-    const ics = buildIcs([activeSeries], DEFAULT_EXPORT_DURATION_MINUTES);
-    triggerIcsDownload(ics);
+    exportAllSeriesAsIcs(allSeries, DEFAULT_EXPORT_DURATION_MINUTES);
 
     if (exportResetTimeoutRef.current) {
       window.clearTimeout(exportResetTimeoutRef.current);
@@ -234,7 +234,7 @@ export function SeriesTabBar({
       aria-label="Add series"
       className="relative inline-flex shrink-0 items-center pb-2.5 pt-1"
     >
-      <span className="inline-flex items-center rounded-[12px] px-1.5 py-0.5 text-[12px] font-medium tracking-[0.16px] text-[#6b6b74] transition-colors duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#161616]">
+      <span className="inline-flex items-center rounded-[12px] px-1.5 py-0.5 text-[12px] font-medium text-[#8f959e] transition-colors duration-spring-moderate hover:text-[#1e1e1a]">
         + Series
       </span>
     </button>
@@ -281,7 +281,7 @@ export function SeriesTabBar({
               <Button
                 type="button"
                 size="icon"
-                disabled={!activeSeries || activeSeries.timepoints.length === 0}
+                disabled={!hasExportableSeries}
                 onClick={handleExport}
                 aria-label={exportIconState === "b" ? "Exported to calendar" : "Export to calendar"}
                 className={cn(

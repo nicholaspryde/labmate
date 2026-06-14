@@ -41,8 +41,9 @@ export function SeriesTab({
   const placeholderShimmer = (
     <TextShimmer
       as="span"
-      duration={4}
-      className="[--base-color:#a8adb5] [--base-gradient-color:#f4f4f0]"
+      duration={1.5}
+      repeatDelay={4}
+      className="[--base-color:#a8adb5] [--base-gradient-color:#f4f4f0] group-hover:[--base-color:#8f959e]"
     >
       {placeholder}
     </TextShimmer>
@@ -80,9 +81,9 @@ export function SeriesTab({
   const labelContent = (
     <span
       className={cn(
-        "absolute inset-0 flex items-center transition-opacity duration-spring-moderate",
+        "absolute inset-0 flex items-center transition-[opacity,color] duration-spring-moderate",
         isEditing ? "pointer-events-none opacity-0" : "opacity-100",
-        !hasName && !shouldShimmerPlaceholder && "text-[#a8adb5]",
+        !hasName && !shouldShimmerPlaceholder && "text-[#a8adb5] group-hover:text-[#8f959e]",
       )}
     >
       {shouldShimmerPlaceholder && !isEditing ? placeholderShimmer : displayText}
@@ -125,7 +126,7 @@ export function SeriesTab({
         event.stopPropagation();
         onDelete();
       }}
-      className="pointer-events-none absolute top-[calc(0.25rem+(100%-0.875rem)/2)] right-0 z-20 flex h-4 w-4 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded bg-[#f9f9f7] text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
+      className="pointer-events-none absolute top-[calc(0.25rem+(100%-0.875rem)/2)] right-0.5 z-20 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded bg-[#f9f9f7] text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
     >
       <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden>
         <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -146,7 +147,6 @@ export function SeriesTab({
         <span
           className={cn(
             "relative inline-block min-w-[4rem] transition-[width] duration-spring-moderate ease-out",
-            showDelete && "pr-2",
           )}
         >
           <span className="invisible block whitespace-pre px-0 text-[16px]" aria-hidden>
@@ -155,6 +155,7 @@ export function SeriesTab({
           {labelContent}
           {editContent}
         </span>
+        {showDelete ? <span className="inline-block w-5 shrink-0" aria-hidden /> : null}
         {underline}
       </button>
       {showDelete ? deleteButton : null}

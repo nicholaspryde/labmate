@@ -503,10 +503,13 @@ export function TimepointRow({
     endTimeInput.trim() !== "" && endTimeInput !== currentEndLabel
       ? filterTimeOptions(endTimeOptions, endTimeInput)
       : endTimeOptions;
-  const timeFieldClassName = cn(
-    "h-8 w-auto min-w-[3rem] rounded-[4px] border-0 bg-white px-1 py-0 text-left text-[14px] font-normal shadow-none transition-colors duration-spring-moderate hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0",
-    "text-[#161616]",
-  );
+  const timeFieldClassName = (filled: boolean) =>
+    cn(
+      "h-8 w-auto min-w-[3rem] rounded-[4px] border-0 bg-white px-1 py-0 text-left text-[14px] font-normal shadow-none transition-colors duration-spring-moderate hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0",
+      filled ? "text-[#1e1e1a]" : "text-[#a8adb5]",
+    );
+  const startTimeFilled = hasScheduledTime || startTimeInput.trim().length > 0;
+  const endTimeFilled = hasScheduledTime || endTimeInput.trim().length > 0;
   const defaultStartScrollValue = closestTimeSlotValue();
   const defaultEndScrollValue = closestTimeSlotValue(addMinutes(new Date(), 60));
   const defaultStartTimeLabel = timeValueToLabel(resolvedAt, defaultStartScrollValue);
@@ -704,7 +707,7 @@ export function TimepointRow({
         style={{
           boxShadow: isHighlighted
             ? HIGHLIGHTED_SURFACE_SHADOW
-            : isSurfaceHovered
+            : isSurfaceHovered || isActive
               ? SURFACE_SHADOW_HOVER
               : SURFACE_SHADOW,
         }}
@@ -753,7 +756,10 @@ export function TimepointRow({
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
             placeholder={isAnchor ? "Add first event name" : "Add event name"}
-            className="h-8 min-w-0 w-full border-0 bg-transparent px-1 py-0 text-[15px] font-normal text-[#161616]/70 shadow-none transition-colors duration-spring-moderate ease-out hover:text-[#161616] focus:text-[#161616] focus-visible:ring-0 placeholder:text-[#a8adb5] hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color] [&::placeholder]:duration-spring-moderate [&::placeholder]:ease-out"
+            className={cn(
+              "h-8 min-w-0 w-full border-0 bg-transparent px-1 py-0 text-[14px] font-normal shadow-none transition-colors duration-spring-moderate ease-out focus-visible:ring-0 placeholder:text-[#a8adb5] hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color] [&::placeholder]:duration-spring-moderate [&::placeholder]:ease-out",
+              name.trim() ? "text-[#1e1e1a]" : "text-[#161616]/70 hover:text-[#161616] focus:text-[#161616]",
+            )}
             onFocus={onFocus}
             aria-label={isAnchor ? "Add first event name" : "Add event name"}
           />
@@ -773,7 +779,7 @@ export function TimepointRow({
             >
               <Plus className="h-3.5 w-3.5 shrink-0 mr-[9px] mt-[9px] text-[#a8adb5]" aria-hidden />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center text-[14px] font-normal text-[#161616]">
+                <div className="flex items-center text-[14px] font-normal text-[#1e1e1a]">
               {isCustomMode ? (
                 <div className="relative inline-flex h-8 shrink-0 items-center">
                   <div ref={setRelativeOffsetAnchorEl} className="relative shrink-0">
@@ -812,7 +818,7 @@ export function TimepointRow({
                         }
                       }}
                       className={cn(
-                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-1 py-0 text-left text-[14px] font-normal shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
+                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-1 py-0 text-left text-[14px] font-normal text-[#1e1e1a] shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
                         relativeSuggestionsOpen && "bg-[#f4f4f0]",
                       )}
                       aria-label="Relative offset"
@@ -843,7 +849,7 @@ export function TimepointRow({
                     ref={setRelativeToPickerAnchorEl}
                     type="button"
                     className={cn(
-                      "inline-flex h-8 min-w-0 max-w-[16rem] items-center rounded-[4px] px-1 text-[14px] font-normal whitespace-nowrap text-[#161616] hover:bg-[#f0f0eb]",
+                      "inline-flex h-8 min-w-0 max-w-[16rem] items-center rounded-[4px] px-1 text-[14px] font-normal whitespace-nowrap text-[#1e1e1a] hover:bg-[#f0f0eb]",
                       relativeToPickerOpen && "bg-[#f0f0eb]",
                     )}
                     onClick={(event) => {
@@ -976,7 +982,7 @@ export function TimepointRow({
                         setRelativeSuggestionsOpen(true);
                       }}
                       className={cn(
-                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-0 py-0 text-left text-[13px] font-normal shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
+                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-0 py-0 text-left text-[13px] font-normal text-[#1e1e1a] shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
                         relativeSuggestionsOpen && "bg-[#f4f4f0]",
                       )}
                       aria-label="Relative offset"
@@ -1018,10 +1024,9 @@ export function TimepointRow({
                   <Button
                     type="button"
                     variant="ghost"
-                    className={cn(
-                      "h-8 w-fit shrink-0 justify-start whitespace-nowrap border-0 bg-transparent pl-1 pr-1 py-0 text-[13px] font-normal shadow-none hover:bg-[#f0f0eb]",
-                      "text-[#161616]",
-                    )}
+                      className={cn(
+                        "h-8 w-fit shrink-0 justify-start whitespace-nowrap border-0 bg-transparent pl-1 pr-1 py-0 text-[13px] font-normal text-[#1e1e1a] shadow-none hover:bg-[#f0f0eb]",
+                      )}
                     aria-label="Choose event day"
                   >
                     {formattedDateLabel}
@@ -1098,7 +1103,7 @@ export function TimepointRow({
                         setStartSuggestionsOpen(true);
                         setEndSuggestionsOpen(false);
                       }}
-                      className={timeFieldClassName}
+                      className={timeFieldClassName(startTimeFilled)}
                       style={{ width: `${startTimeInputWidthCh}ch` }}
                       aria-label="Start time"
                     />
@@ -1191,7 +1196,7 @@ export function TimepointRow({
                         setEndSuggestionsOpen(true);
                         setStartSuggestionsOpen(false);
                       }}
-                      className={timeFieldClassName}
+                      className={timeFieldClassName(endTimeFilled)}
                       style={{ width: `${endTimeInputWidthCh}ch` }}
                       aria-label="End time"
                     />
@@ -1300,11 +1305,11 @@ export function TimepointRow({
                   style={{ overflow: "hidden" }}
                 >
                   <div className="flex items-start pt-1">
-                    <div className="min-w-0 flex-1 flex items-start">
+                    <div className="flex min-h-8 min-w-0 flex-1 items-start pl-1 pr-2">
                       {!showDescriptionInput ? (
                         <button
                           type="button"
-                          className="inline-flex h-8 min-w-0 flex-1 items-center bg-transparent px-1 text-left text-[13px] font-normal text-[#a8adb5] hover:text-[#8f959e]"
+                          className="inline-flex h-8 shrink-0 items-center whitespace-nowrap bg-transparent text-[12px] font-normal text-[#a8adb5] hover:text-[#8f959e]"
                           onClick={(event) => {
                             event.stopPropagation();
                             setShowDescriptionInput(true);
@@ -1313,20 +1318,24 @@ export function TimepointRow({
                             });
                           }}
                         >
-                          Add description
+                          Description...
                         </button>
                       ) : (
                         <textarea
                           ref={descriptionInputRef}
                           value={description}
-                          placeholder="Add description"
+                          placeholder="Description..."
                           rows={1}
                           autoComplete="off"
                           data-1p-ignore=""
                           data-lpignore="true"
                           data-form-type="other"
-                          className="mx-1 block min-h-8 min-w-0 flex-1 resize-none border-0 bg-transparent px-0 pr-2 py-[6px] text-[13px] font-normal leading-5 text-[#161616] shadow-none outline-none placeholder:text-[#a8adb5] focus-visible:ring-0 [field-sizing:content]"
+                          className={cn(
+                            "block min-h-8 w-full min-w-0 resize-none border-0 bg-transparent p-0 text-[12px] font-normal leading-8 shadow-none outline-none placeholder:text-[#a8adb5] focus-visible:ring-0 [field-sizing:content]",
+                            description.trim() ? "text-[#1e1e1a]" : "text-[#a8adb5]",
+                          )}
                           onClick={(event) => event.stopPropagation()}
+                          onFocus={onFocus}
                           onChange={(event) => onDescriptionChange(event.target.value)}
                           onBlur={() => {
                             if (!description.trim()) {
