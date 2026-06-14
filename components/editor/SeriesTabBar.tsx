@@ -3,6 +3,7 @@
 import { Check, Download } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useReducedMotion } from "motion/react";
+import { ExportCalendarDialog } from "@/components/editor/ExportCalendarDialog";
 import { SeriesTab } from "@/components/editor/SeriesTab";
 import { exportAllSeriesAsIcs } from "@/lib/icsExport";
 import { BOOTSTRAP_SERIES_ID } from "@/lib/seriesReducer";
@@ -22,7 +23,6 @@ import { cn } from "@/lib/utils";
 
 const TOOLTIP_CONTENT_CLASS = "border-0 bg-[#161616] text-white";
 const DEFAULT_EXPORT_DURATION_MINUTES = 30;
-const EXPORT_SUCCESS_MS = 1200;
 const SERIES_NAME_PLACEHOLDER = "Add series name";
 
 function seriesDisplayName(item: Series, placeholder: string): string {
@@ -53,7 +53,8 @@ export function SeriesTabBar({
   const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null);
   const [deleteSeriesId, setDeleteSeriesId] = useState<string | null>(null);
   const [exportIconState, setExportIconState] = useState<"a" | "b">("a");
-  const exportResetTimeoutRef = useRef<number | null>(null);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const hasInitialSeriesNameEditRef = useRef(false);
   const pendingSeriesNameFocusRef = useRef(false);
   const activeSeriesTabRef = useRef<HTMLElement | null>(null);
@@ -70,14 +71,6 @@ export function SeriesTabBar({
   const pendingDeleteSeries = deleteSeriesId
     ? (allSeries.find((item) => item.id === deleteSeriesId) ?? null)
     : null;
-
-  useEffect(() => {
-    return () => {
-      if (exportResetTimeoutRef.current) {
-        window.clearTimeout(exportResetTimeoutRef.current);
-      }
-    };
-  }, []);
 
   useLayoutEffect(() => {
     if (!activeSeries) {
@@ -172,22 +165,30 @@ export function SeriesTabBar({
     setDeleteSeriesId(null);
   };
 
-  const handleExport = () => {
-    if (!hasExportableSeries) {
+  const handleExport = async () => {
+    if (!hasExportableSeries || isExporting) {
       return;
     }
 
-    exportAllSeriesAsIcs(allSeries, DEFAULT_EXPORT_DURATION_MINUTES);
+    setIsExporting(true);
+    try {
+      const saved = await exportAllSeriesAsIcs(allSeries, DEFAULT_EXPORT_DURATION_MINUTES);
+      if (!saved) {
+        return;
+      }
 
-    if (exportResetTimeoutRef.current) {
-      window.clearTimeout(exportResetTimeoutRef.current);
+      setExportIconState("b");
+      setExportModalOpen(true);
+    } finally {
+      setIsExporting(false);
     }
+  };
 
-    setExportIconState("b");
-    exportResetTimeoutRef.current = window.setTimeout(() => {
+  const handleExportModalOpenChange = (open: boolean) => {
+    setExportModalOpen(open);
+    if (!open) {
       setExportIconState("a");
-      exportResetTimeoutRef.current = null;
-    }, EXPORT_SUCCESS_MS);
+    }
   };
 
   const dismissBootstrapPlaceholderShimmer = (seriesId: string) => {
@@ -281,8 +282,8 @@ export function SeriesTabBar({
               <Button
                 type="button"
                 size="icon"
-                disabled={!hasExportableSeries}
-                onClick={handleExport}
+                disabled={!hasExportableSeries || isExporting}
+                onClick={() => void handleExport()}
                 aria-label={exportIconState === "b" ? "Exported to calendar" : "Export to calendar"}
                 className={cn(
                   "h-8 w-8 shrink-0 rounded-[12px] border-0 shadow-none",
@@ -314,6 +315,13 @@ export function SeriesTabBar({
           </Tooltip>
         </div>
       </div>
+
+      <ExportCalendarDialog
+        open={exportModalOpen}
+        onOpenChange={handleExportModalOpenChange}
+        seriesList={allSeries}
+        seriesNamePlaceholder={SERIES_NAME_PLACEHOLDER}
+      />
 
       <Dialog open={deleteSeriesId !== null} onOpenChange={(open) => !open && setDeleteSeriesId(null)}>
         <DialogContent showCloseButton={false}>

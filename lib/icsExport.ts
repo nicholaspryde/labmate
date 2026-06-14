@@ -4,8 +4,14 @@ import { v4 as uuid } from "uuid";
 import type { Series } from "@/lib/types";
 import { computeOffsetFromPrevious, fromTotalMinutes, resolveSeriesDates } from "@/lib/timepointMath";
 
-const ICS_EXPORT_ZIP_NAME = "calendar-export.zip";
+export const ICS_EXPORT_ZIP_NAME = "calendar-export.zip";
+
 const BLOB_REVOKE_DELAY_MS = 2_000;
+
+type IcsExportPayload = {
+  blob: Blob;
+  fileName: string;
+};
 
 function toIcsDate(date: Date): [number, number, number, number, number] {
   return [date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes()];
@@ -81,6 +87,86 @@ function buildIcsZip(exports: Array<{ fileName: string; content: string }>): Uin
   return zipSync(entries);
 }
 
+function buildIcsExportPayload(
+  seriesList: Series[],
+  durationMinutes: number,
+  fallbackBaseName = "timepoint-series",
+): IcsExportPayload | null {
+  const exports = buildSeriesIcsExports(seriesList, durationMinutes, fallbackBaseName);
+  if (exports.length === 0) {
+    return null;
+  }
+
+  if (exports.length === 1) {
+    return {
+      fileName: exports[0].fileName,
+      blob: new Blob([exports[0].content], { type: "text/calendar;charset=utf-8" }),
+    };
+  }
+
+  const zip = buildIcsZip(exports);
+  return {
+    fileName: ICS_EXPORT_ZIP_NAME,
+    blob: new Blob([zip.slice()], { type: "application/zip" }),
+  };
+}
+
+function isSaveCancelled(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+type SaveFilePickerWindow = Window & {
+  showSaveFilePicker?: (options: {
+    suggestedName?: string;
+    types?: Array<{
+      description?: string;
+      accept: Record<string, string[]>;
+    }>;
+  }) => Promise<{
+    createWritable: () => Promise<{
+      write: (data: Blob) => Promise<void>;
+      close: () => Promise<void>;
+    }>;
+  }>;
+};
+
+function extensionForFileName(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf(".");
+  return dotIndex === -1 ? "" : fileName.slice(dotIndex);
+}
+
+async function saveBlobWithSystemDialog(blob: Blob, fileName: string): Promise<boolean> {
+  const saveWindow = window as SaveFilePickerWindow;
+  if (typeof saveWindow.showSaveFilePicker === "function") {
+    try {
+      const extension = extensionForFileName(fileName);
+      const handle = await saveWindow.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [
+          {
+            description: extension === ".zip" ? "ZIP archive" : "Calendar file",
+            accept: {
+              [blob.type || "application/octet-stream"]: extension ? [extension] : [],
+            },
+          },
+        ],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (error) {
+      if (isSaveCancelled(error)) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  triggerBlobDownload(blob, fileName);
+  return true;
+}
+
 function triggerBlobDownload(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -95,24 +181,15 @@ function triggerBlobDownload(blob: Blob, fileName: string) {
   }, BLOB_REVOKE_DELAY_MS);
 }
 
-export function exportAllSeriesAsIcs(
+export async function exportAllSeriesAsIcs(
   seriesList: Series[],
   durationMinutes: number,
   fallbackBaseName = "timepoint-series",
-): void {
-  const exports = buildSeriesIcsExports(seriesList, durationMinutes, fallbackBaseName);
-  if (exports.length === 0) {
-    return;
+): Promise<boolean> {
+  const payload = buildIcsExportPayload(seriesList, durationMinutes, fallbackBaseName);
+  if (!payload) {
+    return false;
   }
 
-  if (exports.length === 1) {
-    triggerBlobDownload(
-      new Blob([exports[0].content], { type: "text/calendar;charset=utf-8" }),
-      exports[0].fileName,
-    );
-    return;
-  }
-
-  const zip = buildIcsZip(exports);
-  triggerBlobDownload(new Blob([zip.slice()], { type: "application/zip" }), ICS_EXPORT_ZIP_NAME);
+  return saveBlobWithSystemDialog(payload.blob, payload.fileName);
 }
