@@ -1,5 +1,5 @@
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { Sparkles, Eraser } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -19,21 +19,11 @@ import { OffsetModeToggle } from "@/components/editor/OffsetModeToggle";
 import { PresetsMenu } from "@/components/presets/PresetsMenu";
 import type { ProtocolPreset } from "@/lib/presets/types";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { spring } from "@/lib/springs";
 
 const OPTIMIZE_MESSAGE_MS = 5000;
-const TOOLTIP_CONTENT_CLASS = "border-0 bg-[#161616] text-white";
 const ADD_EVENT_PRESS_SCALE = 0.985;
 const MotionButton = motion.create(Button);
 
@@ -59,7 +49,6 @@ type TimepointEditorProps = {
   onTimepointRelativeReferenceChange: (timepointId: string, relativeToTimepointId: string | null) => void;
   onApplyPreset: (preset: ProtocolPreset) => void;
   onApplyWeekendAvoidance?: (deltaDays: number) => void;
-  onClearAllTimepoints?: () => void;
   optimizePulseKey?: number;
 };
 
@@ -85,7 +74,6 @@ export function TimepointEditor({
   onTimepointRelativeReferenceChange,
   onApplyPreset,
   onApplyWeekendAvoidance,
-  onClearAllTimepoints,
   optimizePulseKey = 0,
 }: TimepointEditorProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -95,7 +83,6 @@ export function TimepointEditor({
   const [addAnimationKey, setAddAnimationKey] = useState(0);
   const [optimizeMessage, setOptimizeMessage] = useState<string | null>(null);
   const [isAddTimepointPressed, setIsAddTimepointPressed] = useState(false);
-  const [clearAllOpen, setClearAllOpen] = useState(false);
   const pendingNameFocusRef = useRef(false);
   const pendingScrollTimepointIdRef = useRef<string | null>(null);
   const shouldReduceMotion = useReducedMotion();
@@ -257,12 +244,6 @@ export function TimepointEditor({
   }
 
   const resolved = resolveSeriesDates(series);
-  const hasAdditionalEvents = series.timepoints.length > 1;
-
-  const handleClearAllConfirm = () => {
-    onClearAllTimepoints?.();
-    setClearAllOpen(false);
-  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -299,29 +280,13 @@ export function TimepointEditor({
           <div className="flex items-center gap-1">
             <OffsetModeToggle value={mode} onChange={onModeChange} />
             <PresetsMenu series={series} offsetMode={mode} onApplyPreset={onApplyPreset} />
-            {onApplyWeekendAvoidance ? (
-              <AvoidWeekendsButton
-                series={series}
-                onApply={onApplyWeekendAvoidance}
-                onMessage={handleOptimizeMessage}
-              />
-            ) : null}
           </div>
-          {hasAdditionalEvents && onClearAllTimepoints ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  size="icon"
-                  onClick={() => setClearAllOpen(true)}
-                  aria-label="Clear all events"
-                  className="h-8 w-8 shrink-0 rounded-[12px] border-0 bg-[#f0f0eb] text-[#161616] shadow-none hover:bg-[#e8e8e4] hover:text-[#161616]"
-                >
-                  <Eraser className="h-4 w-4 text-[#161616]" aria-hidden />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent className={TOOLTIP_CONTENT_CLASS}>Clear all events</TooltipContent>
-            </Tooltip>
+          {onApplyWeekendAvoidance ? (
+            <AvoidWeekendsButton
+              series={series}
+              onApply={onApplyWeekendAvoidance}
+              onMessage={handleOptimizeMessage}
+            />
           ) : null}
         </div>
       </div>
@@ -459,25 +424,6 @@ export function TimepointEditor({
         </motion.div>
         </div>
       </div>
-
-      <Dialog open={clearAllOpen} onOpenChange={setClearAllOpen}>
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>Clear all events?</DialogTitle>
-            <DialogDescription>
-              This will remove all events and reset your protocol. This can&apos;t be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setClearAllOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" variant="destructive" onClick={handleClearAllConfirm}>
-              Clear all
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -72,7 +72,6 @@ export function AvoidWeekendsButton({ series, onApply, onMessage }: AvoidWeekend
               : { opacity: 0, scale: 0.96, x: 6, transition: spring.moderate.exit }
           }
           transition={spring.moderate}
-          className="ml-auto"
         >
           <Button
             type="button"

@@ -220,10 +220,6 @@ export function TimepointCalendarApp() {
                 });
               }}
               onApplyWeekendAvoidance={handleApplyWeekendAvoidance}
-              onClearAllTimepoints={() => {
-                if (!activeSeries) return;
-                dispatch({ type: "clear-all-timepoints", seriesId: activeSeries.id });
-              }}
               optimizePulseKey={optimizePulseKey}
             />
             </div>
