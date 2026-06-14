@@ -7,10 +7,14 @@ import { computeOffsetFromPrevious, fromTotalMinutes, resolveSeriesDates } from 
 export const ICS_EXPORT_ZIP_NAME = "calendar-export.zip";
 
 const BLOB_REVOKE_DELAY_MS = 2_000;
+const SAVE_DIALOG_OPEN_WAIT_MS = 300;
+const SAVE_DIALOG_FOCUS_WAIT_MS = 100;
+const SAVE_DIALOG_DISMISS_TIMEOUT_MS = 120_000;
 
-type IcsExportPayload = {
-  blob: Blob;
+type IcsExportFile = {
   fileName: string;
+  data: Uint8Array;
+  contentType: string;
 };
 
 function toIcsDate(date: Date): [number, number, number, number, number] {
@@ -87,11 +91,11 @@ function buildIcsZip(exports: Array<{ fileName: string; content: string }>): Uin
   return zipSync(entries);
 }
 
-function buildIcsExportPayload(
+function buildIcsExportFile(
   seriesList: Series[],
   durationMinutes: number,
   fallbackBaseName = "timepoint-series",
-): IcsExportPayload | null {
+): IcsExportFile | null {
   const exports = buildSeriesIcsExports(seriesList, durationMinutes, fallbackBaseName);
   if (exports.length === 0) {
     return null;
@@ -100,71 +104,62 @@ function buildIcsExportPayload(
   if (exports.length === 1) {
     return {
       fileName: exports[0].fileName,
-      blob: new Blob([exports[0].content], { type: "text/calendar;charset=utf-8" }),
+      data: strToU8(exports[0].content),
+      contentType: "text/calendar;charset=utf-8",
     };
   }
 
-  const zip = buildIcsZip(exports);
   return {
     fileName: ICS_EXPORT_ZIP_NAME,
-    blob: new Blob([zip.slice()], { type: "application/zip" }),
+    data: buildIcsZip(exports),
+    contentType: "application/zip",
   };
 }
 
-function isSaveCancelled(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
-}
+async function waitForDownloadToSettle(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    window.setTimeout(resolve, SAVE_DIALOG_OPEN_WAIT_MS);
+  });
 
-type SaveFilePickerWindow = Window & {
-  showSaveFilePicker?: (options: {
-    suggestedName?: string;
-    types?: Array<{
-      description?: string;
-      accept: Record<string, string[]>;
-    }>;
-  }) => Promise<{
-    createWritable: () => Promise<{
-      write: (data: Blob) => Promise<void>;
-      close: () => Promise<void>;
-    }>;
-  }>;
-};
-
-function extensionForFileName(fileName: string): string {
-  const dotIndex = fileName.lastIndexOf(".");
-  return dotIndex === -1 ? "" : fileName.slice(dotIndex);
-}
-
-async function saveBlobWithSystemDialog(blob: Blob, fileName: string): Promise<boolean> {
-  const saveWindow = window as SaveFilePickerWindow;
-  if (typeof saveWindow.showSaveFilePicker === "function") {
-    try {
-      const extension = extensionForFileName(fileName);
-      const handle = await saveWindow.showSaveFilePicker({
-        suggestedName: fileName,
-        types: [
-          {
-            description: extension === ".zip" ? "ZIP archive" : "Calendar file",
-            accept: {
-              [blob.type || "application/octet-stream"]: extension ? [extension] : [],
-            },
-          },
-        ],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return true;
-    } catch (error) {
-      if (isSaveCancelled(error)) {
-        return false;
-      }
-      throw error;
-    }
+  if (document.hasFocus()) {
+    return;
   }
 
-  triggerBlobDownload(blob, fileName);
-  return true;
+  await waitForSaveDialogDismissal();
+}
+
+function waitForSaveDialogDismissal(): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.setTimeout(resolve, SAVE_DIALOG_FOCUS_WAIT_MS);
+    };
+
+    const onFocus = () => {
+      if (document.hasFocus()) {
+        finish();
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible" && document.hasFocus()) {
+        finish();
+      }
+    };
+
+    const timeoutId = window.setTimeout(finish, SAVE_DIALOG_DISMISS_TIMEOUT_MS);
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+  });
 }
 
 function triggerBlobDownload(blob: Blob, fileName: string) {
@@ -186,10 +181,14 @@ export async function exportAllSeriesAsIcs(
   durationMinutes: number,
   fallbackBaseName = "timepoint-series",
 ): Promise<boolean> {
-  const payload = buildIcsExportPayload(seriesList, durationMinutes, fallbackBaseName);
+  const payload = buildIcsExportFile(seriesList, durationMinutes, fallbackBaseName);
   if (!payload) {
     return false;
   }
 
-  return saveBlobWithSystemDialog(payload.blob, payload.fileName);
+  const blob = new Blob([payload.data.slice()], { type: payload.contentType });
+  triggerBlobDownload(blob, payload.fileName);
+  await waitForDownloadToSettle();
+
+  return true;
 }
