@@ -25,10 +25,21 @@ import { cn } from "@/lib/utils";
 const MAX_MESSAGE_LENGTH = 2000;
 
 export function HelpButton() {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+
+  const openAboutDialog = () => {
+    setMenuOpen(false);
+    setAboutOpen(true);
+  };
+
+  const openFeedbackDialog = () => {
+    setMenuOpen(false);
+    setFeedbackOpen(true);
+  };
 
   const trimmedMessage = message.trim();
   const canSend = trimmedMessage.length > 0 && !isSending;
@@ -61,7 +72,7 @@ export function HelpButton() {
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             type="button"
@@ -74,8 +85,8 @@ export function HelpButton() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" sideOffset={8}>
-          <DropdownMenuItem onSelect={() => setAboutOpen(true)}>What is this?</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setFeedbackOpen(true)}>Send feedback</DropdownMenuItem>
+          <DropdownMenuItem onSelect={openAboutDialog}>What is this?</DropdownMenuItem>
+          <DropdownMenuItem onSelect={openFeedbackDialog}>Send feedback</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
