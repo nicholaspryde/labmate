@@ -8,7 +8,7 @@ import { BOOTSTRAP_SERIES_ID, initialState, nowAnchorIso } from "@/lib/seriesRed
 import { loadLocalWorkspace, saveLocalWorkspace } from "@/lib/workspace/local";
 import { loadRemoteWorkspace, migrateLocalWorkspaceToRemote, saveRemoteWorkspace } from "@/lib/workspace/remote";
 
-export type SaveStatus = "idle" | "saving" | "saved" | "error";
+export type SaveStatus = "idle" | "offline";
 
 type UseWorkspaceSyncOptions = {
   state: AppState;
@@ -17,12 +17,18 @@ type UseWorkspaceSyncOptions = {
   authLoading: boolean;
 };
 
+function isBrowserOffline(): boolean {
+  return typeof navigator !== "undefined" && !navigator.onLine;
+}
+
 export function useWorkspaceSync({ state, onHydrate, user, authLoading }: UseWorkspaceSyncOptions) {
   const [hydrated, setHydrated] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const hydratedRef = useRef(false);
   const skipNextSaveRef = useRef(true);
   const saveTimerRef = useRef<number | null>(null);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
     if (authLoading || hydratedRef.current) {
@@ -61,7 +67,9 @@ export function useWorkspaceSync({ state, onHydrate, user, authLoading }: UseWor
             } else {
               applyBootstrapAnchor(onHydrate);
             }
-            setSaveStatus("error");
+            if (isBrowserOffline()) {
+              setSaveStatus("offline");
+            }
           }
         }
       } else {
@@ -110,6 +118,33 @@ export function useWorkspaceSync({ state, onHydrate, user, authLoading }: UseWor
     };
   }, [hydrated, state, user]);
 
+  useEffect(() => {
+    function handleOnline() {
+      setSaveStatus("idle");
+      if (hydratedRef.current && user && isSupabaseConfigured()) {
+        void persistState(stateRef.current, user, setSaveStatus);
+      }
+    }
+
+    function handleOffline() {
+      if (user && isSupabaseConfigured()) {
+        setSaveStatus("offline");
+      }
+    }
+
+    if (user && isSupabaseConfigured() && isBrowserOffline()) {
+      setSaveStatus("offline");
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [user]);
+
   const retrySave = useCallback(() => {
     void persistState(state, user, setSaveStatus);
   }, [state, user]);
@@ -129,25 +164,28 @@ function applyBootstrapAnchor(onHydrate: (state: AppState) => void) {
 }
 
 async function persistState(state: AppState, user: User | null, setSaveStatus: (status: SaveStatus) => void) {
-  if (user && isSupabaseConfigured()) {
-    const supabase = createClient();
-    if (!supabase) {
-      saveLocalWorkspace(state);
-      return;
-    }
+  saveLocalWorkspace(state);
 
-    setSaveStatus("saving");
-    try {
-      await saveRemoteWorkspace(supabase, user.id, state);
-      saveLocalWorkspace(state);
-      setSaveStatus("saved");
-      window.setTimeout(() => setSaveStatus("idle"), 2000);
-    } catch {
-      saveLocalWorkspace(state);
-      setSaveStatus("error");
-    }
+  if (!user || !isSupabaseConfigured()) {
     return;
   }
 
-  saveLocalWorkspace(state);
+  if (isBrowserOffline()) {
+    setSaveStatus("offline");
+    return;
+  }
+
+  const supabase = createClient();
+  if (!supabase) {
+    return;
+  }
+
+  try {
+    await saveRemoteWorkspace(supabase, user.id, state);
+    setSaveStatus("idle");
+  } catch {
+    if (isBrowserOffline()) {
+      setSaveStatus("offline");
+    }
+  }
 }

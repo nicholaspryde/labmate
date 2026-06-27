@@ -24,7 +24,7 @@ export function TimepointCalendarApp() {
     dispatch({ type: "replace-state", state: nextState });
   }, []);
 
-  const { hydrated, saveStatus, retrySave } = useWorkspaceSync({
+  const { hydrated, saveStatus } = useWorkspaceSync({
     state,
     onHydrate: handleHydrate,
     user,
@@ -101,7 +101,7 @@ export function TimepointCalendarApp() {
 
   return (
     <main className="min-h-screen bg-background p-4 md:p-6 lg:h-screen lg:overflow-hidden lg:pb-0">
-      <SaveStatusIndicator status={saveStatus} onRetry={retrySave} signedIn={Boolean(user)} />
+      <SaveStatusIndicator status={saveStatus} />
       <div className="h-full w-full">
         {state.series.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-12">
