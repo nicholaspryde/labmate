@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { DialRoot } from "dialkit";
+import { AuthButton } from "@/components/auth/auth-button";
 import { HelpButton } from "@/components/HelpButton";
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -35,6 +36,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <HelpButton />
+          <AuthButton />
           <DialRoot />
         </Providers>
       </body>

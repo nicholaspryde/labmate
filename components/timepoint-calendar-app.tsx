@@ -1,27 +1,35 @@
 "use client";
 
-import { useCallback, useDeferredValue, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useReducer, useRef, useState } from "react";
+import { useAuth } from "@/components/auth/auth-provider";
+import { SaveStatusIndicator } from "@/components/workspace/SaveStatusIndicator";
 import { CalendarPreview, type TimepointHoverHighlight } from "@/components/calendar/CalendarPreview";
 import { SeriesTabBar } from "@/components/editor/SeriesTabBar";
 import { TimepointEditor } from "@/components/editor/TimepointEditor";
 import { Button } from "@/components/ui/button";
+import { useWorkspaceSync } from "@/hooks/use-workspace-sync";
 import { mapSeriesToCalendarEvents } from "@/lib/calendarMapping";
-import { BOOTSTRAP_SERIES_ID, initialState, nowAnchorIso, seriesReducer } from "@/lib/seriesReducer";
+import { initialState, seriesReducer } from "@/lib/seriesReducer";
+import type { AppState } from "@/lib/types";
 
 export function TimepointCalendarApp() {
+  const { user, loading: authLoading } = useAuth();
   const [state, dispatch] = useReducer(seriesReducer, initialState);
   const [highlightedTimepoint, setHighlightedTimepoint] = useState<TimepointHoverHighlight | null>(null);
   const [optimizePulseKey, setOptimizePulseKey] = useState(0);
   const [isEditorScrolled, setIsEditorScrolled] = useState(false);
   const editorScrollRef = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {
-    dispatch({
-      type: "set-anchor-date-time",
-      seriesId: BOOTSTRAP_SERIES_ID,
-      anchorAt: nowAnchorIso(),
-    });
+  const handleHydrate = useCallback((nextState: AppState) => {
+    dispatch({ type: "replace-state", state: nextState });
   }, []);
+
+  const { hydrated, saveStatus, retrySave } = useWorkspaceSync({
+    state,
+    onHydrate: handleHydrate,
+    user,
+    authLoading,
+  });
 
   const activeSeries =
     state.series.find((series) => series.id === state.activeSeriesId) ??
@@ -83,8 +91,17 @@ export function TimepointCalendarApp() {
     [activeSeries],
   );
 
+  if (!hydrated) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background p-6">
+        <p className="text-sm text-muted-foreground">Loading your workspace...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-background p-4 md:p-6 lg:h-screen lg:overflow-hidden lg:pb-0">
+      <SaveStatusIndicator status={saveStatus} onRetry={retrySave} signedIn={Boolean(user)} />
       <div className="h-full w-full">
         {state.series.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-12">
