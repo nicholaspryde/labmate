@@ -64,8 +64,10 @@ This creates `user_workspaces` and `user_presets` with Row Level Security so eac
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
 ```
+
+Use the **Project URL** from Supabase API settings — **not** the REST URL (`/rest/v1`). A trailing `/rest/v1` breaks Google/email login.
 
 4. Restart the dev server: `npm run dev`
 
@@ -107,6 +109,13 @@ Env vars missing or dev server not restarted after adding them.
 
 **Sign-up works but sign-in fails**  
 Email confirmation may be required — check your inbox or disable confirm in Auth settings for dev.
+
+**403 on `user_workspaces` after sign-in**  
+Login works but the browser console shows `403 (Forbidden)` on `/rest/v1/user_workspaces`. This means the database tables are missing RLS policies or table grants for signed-in users.
+
+1. Open Supabase **SQL → New query**
+2. Paste and run [`fix-403.sql`](./fix-403.sql) (or re-run the full [`schema.sql`](./schema.sql))
+3. Refresh the app and sign in again
 
 **Save failed / Retry**  
 Check browser console and Supabase **Logs**. Usually means `schema.sql` wasn’t run or RLS policies are missing.

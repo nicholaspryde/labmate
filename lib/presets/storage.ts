@@ -66,39 +66,3 @@ export function savePreset(preset: ProtocolPreset): SavedPreset {
 export function deleteSavedPreset(presetId: string): void {
   writeRaw(readRaw().filter((preset) => preset.id !== presetId));
 }
-
-export function renameSavedPreset(presetId: string, name: string): SavedPreset | null {
-  const trimmed = name.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  let updated: SavedPreset | null = null;
-  const next = readRaw().map((preset) => {
-    if (preset.id !== presetId) {
-      return preset;
-    }
-    updated = { ...preset, name: trimmed };
-    return updated;
-  });
-
-  if (!updated) {
-    return null;
-  }
-
-  writeRaw(next);
-  return updated;
-}
-
-export function upsertImportedPreset(preset: ProtocolPreset): SavedPreset {
-  const saved: SavedPreset = {
-    ...preset,
-    id: uuid(),
-    createdAt: preset.createdAt || new Date().toISOString(),
-  };
-
-  const existing = readRaw();
-  const next = [saved, ...existing].slice(0, MAX_SAVED_PRESETS);
-  writeRaw(next);
-  return saved;
-}

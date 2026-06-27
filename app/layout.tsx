@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import { DialRoot } from "dialkit";
 import { AuthButton } from "@/components/auth/auth-button";
 import { HelpButton } from "@/components/HelpButton";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 import "dialkit/styles.css";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Labmate",
@@ -29,7 +26,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased`}>
+      <head>
+        <link rel="preconnect" href="https://rsms.me/" />
+        <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+      </head>
+      <body className="antialiased">
         <div aria-hidden className="pointer-events-none fixed h-0 w-0 overflow-hidden opacity-0">
           <input type="text" name="labmate-prevent-autofill" tabIndex={-1} autoComplete="off" readOnly />
         </div>

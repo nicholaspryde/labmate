@@ -8,10 +8,30 @@ type WorkspaceRow = {
   updated_at: string;
 };
 
+async function assertAuthenticatedClient(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<void> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Workspace sync requires an active sign-in session.");
+  }
+
+  if (user.id !== userId) {
+    throw new Error("Signed-in user does not match the workspace owner.");
+  }
+}
+
 export async function loadRemoteWorkspace(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<AppState | null> {
+  await assertAuthenticatedClient(supabase, userId);
+
   const { data, error } = await supabase
     .from("user_workspaces")
     .select("app_state")
@@ -34,6 +54,8 @@ export async function saveRemoteWorkspace(
   userId: string,
   state: AppState,
 ): Promise<void> {
+  await assertAuthenticatedClient(supabase, userId);
+
   const { error } = await supabase.from("user_workspaces").upsert(
     {
       user_id: userId,

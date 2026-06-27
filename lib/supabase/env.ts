@@ -1,7 +1,12 @@
-/** Supabase project URL from env. */
+/** Supabase project URL from env (no path suffix — not /rest/v1). */
 export function getSupabaseUrl(): string | undefined {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  return url || undefined;
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!raw) {
+    return undefined;
+  }
+
+  // Common misconfiguration: pasting the REST API URL instead of the project URL.
+  return raw.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
 }
 
 /**

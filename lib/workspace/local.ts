@@ -26,11 +26,3 @@ export function saveLocalWorkspace(state: AppState): void {
 
   window.localStorage.setItem(LOCAL_WORKSPACE_KEY, JSON.stringify(state));
 }
-
-export function clearLocalWorkspace(): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.removeItem(LOCAL_WORKSPACE_KEY);
-}
