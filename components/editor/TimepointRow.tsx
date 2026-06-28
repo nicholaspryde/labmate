@@ -51,8 +51,8 @@ function formatRelativeOffsetInput(totalMinutes: number): string {
   return parts.join(" ");
 }
 
-function parseRelativeOffsetInput(value: string): number | null {
-  const compact = value
+function compactRelativeOffsetText(value: string): string {
+  return value
     .trim()
     .toLowerCase()
     .replace(/\+/g, "")
@@ -63,6 +63,10 @@ function parseRelativeOffsetInput(value: string): number | null {
     .replace(/minutes?/g, "m")
     .replace(/mins?/g, "m")
     .replace(/\s+/g, "");
+}
+
+function parseRelativeOffsetInput(value: string): number | null {
+  const compact = compactRelativeOffsetText(value);
   if (!compact) return null;
 
   const matcher = /([+-]?\d+)([wdhm])/g;
@@ -192,6 +196,278 @@ function RelativePickerCheck({ selected }: { selected: boolean }) {
     <span className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
       {selected ? <Check className="h-3.5 w-3.5 text-[#161616]" strokeWidth={2.5} /> : null}
     </span>
+  );
+}
+
+const RELATIVE_OFFSET_SUGGESTIONS = [
+  "+1 day",
+  "+2 days",
+  "+3 days",
+  "+4 days",
+  "+5 days",
+  "+1 week",
+  "+2 weeks",
+  "+3 weeks",
+] as const;
+
+function relativeSuggestionMatchesQuery(suggestion: string, query: string): boolean {
+  const queryNormalized = query.trim().toLowerCase().replace(/\+/g, "");
+  if (!queryNormalized) {
+    return true;
+  }
+
+  const displayNormalized = suggestion.toLowerCase().replace(/\+/g, "").trim();
+  if (displayNormalized.includes(queryNormalized)) {
+    return true;
+  }
+
+  const queryCompact = compactRelativeOffsetText(query);
+  const suggestionCompact = compactRelativeOffsetText(suggestion);
+  if (queryCompact && suggestionCompact.includes(queryCompact)) {
+    return true;
+  }
+
+  const queryParsed = parseRelativeOffsetInput(query);
+  if (queryParsed !== null) {
+    const suggestionParsed = parseRelativeOffsetInput(suggestion);
+    return suggestionParsed === queryParsed;
+  }
+
+  return false;
+}
+
+type RelativeOffsetSuggestionOption = {
+  minutes: number;
+  label: string;
+  isGenerated: boolean;
+};
+
+function relativeOffsetOptionLabel(totalMinutes: number): string {
+  return formatRelativeOffsetInput(totalMinutes);
+}
+
+function presetToRelativeOffsetOption(preset: string): RelativeOffsetSuggestionOption | null {
+  const minutes = parseRelativeOffsetInput(preset);
+  if (minutes === null) {
+    return null;
+  }
+
+  return {
+    minutes,
+    label: relativeOffsetOptionLabel(minutes),
+    isGenerated: false,
+  };
+}
+
+function matchRelativeSuggestions(
+  suggestions: readonly string[],
+  query: string,
+): RelativeOffsetSuggestionOption[] {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return suggestions
+      .map(presetToRelativeOffsetOption)
+      .filter((option): option is RelativeOffsetSuggestionOption => option !== null);
+  }
+
+  return suggestions
+    .filter((suggestion) => relativeSuggestionMatchesQuery(suggestion, trimmed))
+    .map(presetToRelativeOffsetOption)
+    .filter((option): option is RelativeOffsetSuggestionOption => option !== null);
+}
+
+function buildRelativeOffsetSuggestions(
+  suggestions: readonly string[],
+  query: string,
+): RelativeOffsetSuggestionOption[] {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return suggestions
+      .map(presetToRelativeOffsetOption)
+      .filter((option): option is RelativeOffsetSuggestionOption => option !== null);
+  }
+
+  const parsed = parseRelativeOffsetInput(trimmed);
+  const generated =
+    parsed !== null
+      ? {
+          minutes: parsed,
+          label: relativeOffsetOptionLabel(parsed),
+          isGenerated: true,
+        }
+      : null;
+  const matched = matchRelativeSuggestions(suggestions, trimmed);
+
+  const presetList =
+    matched.length > 0 ? matched : generated ? [] : matchRelativeSuggestions(suggestions, "");
+
+  if (!generated) {
+    return presetList;
+  }
+
+  const withoutDuplicate = presetList.filter((option) => option.minutes !== parsed);
+  return [generated, ...withoutDuplicate];
+}
+
+function isRelativeOffsetSuggestionActive(minutes: number, displayOffsetMinutes: number): boolean {
+  return minutes === displayOffsetMinutes;
+}
+
+function relativeOffsetSuggestionClassName(isActive: boolean, isGenerated: boolean) {
+  return cn(
+    "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent",
+    (isActive || isGenerated) && "bg-[#f0f0eb] font-medium text-[#161616] hover:bg-[#ebebe5]",
+  );
+}
+
+type RelativeOffsetDropdownProps = {
+  displayOffsetMinutes: number;
+  onDisplayOffsetChange: (minutes: number) => void;
+  onFocus: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  error: string | null;
+  onErrorChange: (error: string | null) => void;
+  triggerClassName?: string;
+};
+
+function RelativeOffsetDropdown({
+  displayOffsetMinutes,
+  onDisplayOffsetChange,
+  onFocus,
+  open,
+  onOpenChange,
+  error,
+  onErrorChange,
+  triggerClassName,
+}: RelativeOffsetDropdownProps) {
+  const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null);
+  const [filter, setFilter] = useState("");
+  const filterInputRef = useRef<HTMLInputElement>(null);
+  const displayLabel = formatRelativeOffsetInput(displayOffsetMinutes);
+  const filteredSuggestions = buildRelativeOffsetSuggestions(RELATIVE_OFFSET_SUGGESTIONS, filter);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setFilter("");
+    onErrorChange(null);
+    const frameId = requestAnimationFrame(() => {
+      filterInputRef.current?.focus();
+      filterInputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [open, onErrorChange]);
+
+  const applyFilter = (): boolean => {
+    if (!filter.trim()) {
+      return true;
+    }
+
+    const parsed = parseRelativeOffsetInput(filter);
+    if (parsed === null) {
+      onErrorChange("Use format like +1d, +3h, +30m");
+      return false;
+    }
+
+    onDisplayOffsetChange(parsed);
+    onErrorChange(null);
+    return true;
+  };
+
+  const applySuggestion = (option: RelativeOffsetSuggestionOption) => {
+    onDisplayOffsetChange(option.minutes);
+    onErrorChange(null);
+    onOpenChange(false);
+  };
+
+  const closeDropdown = () => {
+    if (filter.trim()) {
+      applyFilter();
+    }
+    onOpenChange(false);
+  };
+
+  return (
+    <div ref={setAnchorEl} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onFocus();
+          onOpenChange(!open);
+        }}
+        className={cn(
+          "inline-flex h-8 min-w-0 max-w-full items-center rounded-[4px] text-left font-normal text-[#1e1e1a] hover:bg-[#f4f4f0]",
+          open && "bg-[#f4f4f0]",
+          triggerClassName,
+        )}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label={`Relative offset: ${displayLabel}`}
+      >
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <Plus className="h-3.5 w-3.5 shrink-0 text-[#a8adb5]" aria-hidden />
+          <span className="truncate">{displayLabel}</span>
+        </span>
+      </button>
+      <AnchoredList open={open} anchorEl={anchorEl} width={200}>
+        <div className="sticky top-0 z-10 -mx-1 border-b border-border/60 bg-popover px-1.5 py-1.5">
+          <input
+            ref={filterInputRef}
+            value={filter}
+            placeholder="Type 30m, 4h, 2d 1w..."
+            onChange={(event) => {
+              setFilter(event.target.value);
+              if (error) {
+                onErrorChange(null);
+              }
+            }}
+            onBlur={() => {
+              setTimeout(() => closeDropdown(), 120);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (applyFilter()) {
+                  onOpenChange(false);
+                }
+              }
+              if (event.key === "Escape") {
+                onOpenChange(false);
+              }
+            }}
+            onClick={(event) => event.stopPropagation()}
+            className="w-full border-0 bg-transparent px-1 py-1 text-sm text-[#1e1e1a] outline-none placeholder:text-[#8f959e]"
+            aria-label="Filter or change offset"
+          />
+        </div>
+        {filteredSuggestions.map((option) => {
+          const isActive = isRelativeOffsetSuggestionActive(option.minutes, displayOffsetMinutes);
+          return (
+            <button
+              key={`${option.isGenerated ? "generated" : "preset"}-${option.minutes}`}
+              type="button"
+              aria-selected={isActive}
+              className={relativeOffsetSuggestionClassName(isActive, option.isGenerated)}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                applySuggestion(option);
+              }}
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <Plus className="h-3.5 w-3.5 shrink-0 text-[#6b6b74]" aria-hidden />
+                <span className="truncate">{option.label}</span>
+              </span>
+              <RelativePickerCheck selected={isActive} />
+            </button>
+          );
+        })}
+      </AnchoredList>
+    </div>
   );
 }
 
@@ -373,12 +649,10 @@ export function TimepointRow({
     endTimeInput,
   };
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
-  const [relativeOffsetAnchorEl, setRelativeOffsetAnchorEl] = useState<HTMLDivElement | null>(null);
-  const [startTimeAnchorEl, setStartTimeAnchorEl] = useState<HTMLDivElement | null>(null);
-  const [endTimeAnchorEl, setEndTimeAnchorEl] = useState<HTMLDivElement | null>(null);
-  const [relativeOffsetInput, setRelativeOffsetInput] = useState(formatRelativeOffsetInput(displayOffsetMinutes));
   const [relativeOffsetError, setRelativeOffsetError] = useState<string | null>(null);
   const [relativeSuggestionsOpen, setRelativeSuggestionsOpen] = useState(false);
+  const [startTimeAnchorEl, setStartTimeAnchorEl] = useState<HTMLDivElement | null>(null);
+  const [endTimeAnchorEl, setEndTimeAnchorEl] = useState<HTMLDivElement | null>(null);
   const [relativeToPickerOpen, setRelativeToPickerOpen] = useState(false);
   const [relativeToMenuLevel, setRelativeToMenuLevel] = useState<"first" | "specific">("first");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -391,18 +665,6 @@ export function TimepointRow({
   const [relativeDatesPulseActive, setRelativeDatesPulseActive] = useState(false);
   const isCustomMode = mode === "custom";
   const inlineReferenceLabel = formatRelativeReferenceReadout(relativeToMode, relativeReferenceLabel);
-  const relativeSuggestions = [
-    "+4 hours",
-    "+8 hours",
-    "+12 hours",
-    "+1 day",
-    "+2 days",
-    "+3 days",
-    "+2 weeks",
-    "+3 weeks",
-    "+1 day 12 hours",
-    "+7 days",
-  ];
 
   useEffect(() => {
     if (description.trim()) {
@@ -479,7 +741,6 @@ export function TimepointRow({
   }, [autoFocusName, onNameFocusComplete]);
 
   useEffect(() => {
-    setRelativeOffsetInput(formatRelativeOffsetInput(displayOffsetMinutes));
     setRelativeOffsetError(null);
   }, [displayOffsetMinutes]);
 
@@ -704,29 +965,6 @@ export function TimepointRow({
     setEndSuggestionsOpen(false);
   };
 
-  const applyDisplayOffsetInput = (): boolean => {
-    const parsed = parseRelativeOffsetInput(relativeOffsetInput);
-    if (parsed === null) {
-      setRelativeOffsetError("Use format like +1d, +3h, +30m");
-      return false;
-    }
-    onDisplayOffsetChange(parsed);
-    setRelativeOffsetInput(formatRelativeOffsetInput(parsed));
-    setRelativeOffsetError(null);
-    return true;
-  };
-
-  const applyDisplaySuggestion = (suggestion: string) => {
-    const parsed = parseRelativeOffsetInput(suggestion);
-    if (parsed === null) {
-      return;
-    }
-    onDisplayOffsetChange(parsed);
-    setRelativeOffsetInput(formatRelativeOffsetInput(parsed));
-    setRelativeOffsetError(null);
-    setRelativeSuggestionsOpen(false);
-  };
-
   return (
     <div
       ref={setNodeRef}
@@ -811,73 +1049,30 @@ export function TimepointRow({
               transition={spring.slow}
               onAnimationComplete={() => setRelativeDatesPulseActive(false)}
             >
-              <Plus className="h-3.5 w-3.5 shrink-0 mr-[9px] mt-[9px] text-[#a8adb5]" aria-hidden />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center text-[14px] font-normal text-[#1e1e1a]">
               {isCustomMode ? (
                 <div className="relative inline-flex h-8 shrink-0 items-center">
-                  <div ref={setRelativeOffsetAnchorEl} className="relative shrink-0">
-                    <Input
-                      value={relativeOffsetInput}
-                      onChange={(event) => {
-                        setRelativeOffsetInput(event.target.value);
-                        if (relativeOffsetError) {
-                          setRelativeOffsetError(null);
-                        }
-                        if (!relativeSuggestionsOpen) {
-                          setRelativeSuggestionsOpen(true);
-                        }
-                      }}
-                      onBlur={() => {
-                        applyDisplayOffsetInput();
-                        setTimeout(() => setRelativeSuggestionsOpen(false), 120);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          applyDisplayOffsetInput();
-                          setRelativeSuggestionsOpen(false);
-                        }
-                        if (event.key === "Escape") {
-                          setRelativeSuggestionsOpen(false);
-                        }
-                      }}
-                      onClick={(event) => event.stopPropagation()}
-                      onFocus={(event) => {
-                        onFocus();
-                        event.target.select();
-                        setRelativeSuggestionsOpen(true);
-                        if (relativeToPickerOpen) {
-                          closeRelativeToPicker();
-                        }
-                      }}
-                      className={cn(
-                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-1 py-0 text-left text-[14px] font-normal text-[#1e1e1a] shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
-                        relativeSuggestionsOpen && "bg-[#f4f4f0]",
-                      )}
-                      aria-label="Relative offset"
-                    />
-                    <AnchoredList
-                      open={relativeSuggestionsOpen && !relativeToPickerOpen}
-                      anchorEl={relativeOffsetAnchorEl}
-                      width={176}
-                    >
-                      {relativeSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          className="flex w-full cursor-pointer items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent"
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            applyDisplaySuggestion(suggestion);
-                          }}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </AnchoredList>
-                  </div>
+                  <RelativeOffsetDropdown
+                    displayOffsetMinutes={displayOffsetMinutes}
+                    onDisplayOffsetChange={onDisplayOffsetChange}
+                    onFocus={() => {
+                      onFocus();
+                      if (relativeToPickerOpen) {
+                        closeRelativeToPicker();
+                      }
+                    }}
+                    open={relativeSuggestionsOpen && !relativeToPickerOpen}
+                    onOpenChange={(next) => {
+                      if (next) {
+                        closeRelativeToPicker();
+                      }
+                      setRelativeSuggestionsOpen(next);
+                    }}
+                    error={relativeOffsetError}
+                    onErrorChange={setRelativeOffsetError}
+                    triggerClassName="px-1 text-[14px]"
+                  />
 
                   <button
                     ref={setRelativeToPickerAnchorEl}
@@ -982,67 +1177,16 @@ export function TimepointRow({
                   </AnchoredList>
                 </div>
               ) : (
-                <div className="relative inline-flex h-8 shrink-0 items-center">
-                  <div ref={setRelativeOffsetAnchorEl} className="relative shrink-0">
-                    <Input
-                      value={relativeOffsetInput}
-                      onChange={(event) => {
-                        setRelativeOffsetInput(event.target.value);
-                        if (relativeOffsetError) {
-                          setRelativeOffsetError(null);
-                        }
-                        if (!relativeSuggestionsOpen) {
-                          setRelativeSuggestionsOpen(true);
-                        }
-                      }}
-                      onBlur={() => {
-                        applyDisplayOffsetInput();
-                        setTimeout(() => setRelativeSuggestionsOpen(false), 120);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          applyDisplayOffsetInput();
-                          setRelativeSuggestionsOpen(false);
-                        }
-                        if (event.key === "Escape") {
-                          setRelativeSuggestionsOpen(false);
-                        }
-                      }}
-                      onClick={(event) => event.stopPropagation()}
-                      onFocus={(event) => {
-                        onFocus();
-                        event.target.select();
-                        setRelativeSuggestionsOpen(true);
-                      }}
-                      className={cn(
-                        "block h-8 !w-auto min-w-0 max-w-full border-0 bg-transparent px-0 py-0 text-left text-[13px] font-normal text-[#1e1e1a] shadow-none [field-sizing:content] hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0 rounded-[4px]",
-                        relativeSuggestionsOpen && "bg-[#f4f4f0]",
-                      )}
-                      aria-label="Relative offset"
-                    />
-                    <AnchoredList
-                      open={relativeSuggestionsOpen}
-                      anchorEl={relativeOffsetAnchorEl}
-                      width={176}
-                    >
-                      {relativeSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          className="flex w-full cursor-pointer items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent"
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            applyDisplaySuggestion(suggestion);
-                          }}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </AnchoredList>
-                  </div>
-                </div>
+                <RelativeOffsetDropdown
+                  displayOffsetMinutes={displayOffsetMinutes}
+                  onDisplayOffsetChange={onDisplayOffsetChange}
+                  onFocus={onFocus}
+                  open={relativeSuggestionsOpen}
+                  onOpenChange={setRelativeSuggestionsOpen}
+                  error={relativeOffsetError}
+                  onErrorChange={setRelativeOffsetError}
+                  triggerClassName="pl-1 pr-1.5 text-[13px]"
+                />
               )}
                 </div>
                 {isActive && relativeOffsetError && (
@@ -1072,13 +1216,13 @@ export function TimepointRow({
                 >
                   <div className="h-[10px] w-full rounded-[3px] bg-[#e8e8e4]" />
                 </div>
-                <div className="t-skel-content pl-1 pr-1">
+                <div className="t-skel-content">
                   {showDateLabel ? (
                     <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex h-8 w-full min-w-0 items-center justify-start whitespace-nowrap rounded-md border-0 bg-transparent py-0 text-left text-[13px] font-normal text-[#1e1e1a] shadow-none hover:bg-[#f0f0eb]"
+                          className="inline-flex h-8 w-full min-w-0 items-center justify-start whitespace-nowrap rounded-md border-0 bg-transparent py-0 pl-1 pr-1 text-left text-[13px] font-normal text-[#1e1e1a] shadow-none hover:bg-[#f0f0eb]"
                           aria-label="Choose event day"
                         >
                           {formattedDateLabel}
