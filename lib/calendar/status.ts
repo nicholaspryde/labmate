@@ -17,6 +17,7 @@ function toEventMappings(rows: Awaited<ReturnType<typeof getEventMappings>>) {
   return rows.map((row) => ({
     seriesId: row.series_id,
     timepointId: row.timepoint_id,
+    externalEventId: row.external_event_id,
     contentHash: row.content_hash,
   }));
 }

@@ -1,14 +1,17 @@
 "use client";
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CalendarSyncProvider } from "@/components/calendar/CalendarSyncProvider";
 import { CalendarSyncControls } from "@/components/calendar/CalendarSyncControls";
 import { SaveStatusIndicator } from "@/components/workspace/SaveStatusIndicator";
 import { CalendarPreview, type TimepointHoverHighlight } from "@/components/calendar/CalendarPreview";
-import { SeriesTabBar } from "@/components/editor/SeriesTabBar";
+import { ExperimentPanel } from "@/components/experiment/experiment-panel";
 import { TimepointEditor } from "@/components/editor/TimepointEditor";
 import { Button } from "@/components/ui/button";
+import { useAppNavigation } from "@/components/app-navigation-provider";
+import { useExperimentPanelSlot } from "@/components/workspace/workspace-chrome-context";
 import { useWorkspaceSync } from "@/hooks/use-workspace-sync";
 import { mapSeriesToCalendarEvents } from "@/lib/calendarMapping";
 import { initialState, seriesReducer } from "@/lib/seriesReducer";
@@ -24,6 +27,8 @@ export function TimepointCalendarApp({
   deepLinkTimepointId = null,
 }: TimepointCalendarAppProps = {}) {
   const { user, loading: authLoading } = useAuth();
+  const { section, setSection } = useAppNavigation();
+  const experimentPanelSlot = useExperimentPanelSlot();
   const [state, dispatch] = useReducer(seriesReducer, initialState);
   const [highlightedTimepoint, setHighlightedTimepoint] = useState<TimepointHoverHighlight | null>(null);
   const [optimizePulseKey, setOptimizePulseKey] = useState(0);
@@ -49,9 +54,9 @@ export function TimepointCalendarApp({
     state.series.find((series) => series.id === state.activeSeriesId) ??
     state.series[0] ??
     null;
-  // Defer calendar event mapping so heavy calendar re-renders don't block keystroke commits.
   const deferredSeries = useDeferredValue(state.series);
   const calendarEvents = useMemo(() => mapSeriesToCalendarEvents(deferredSeries), [deferredSeries]);
+  const showWorkspace = section === "active" && state.series.length > 0 && activeSeries;
 
   const createSeries = () => {
     dispatch({ type: "create-series", name: "" });
@@ -106,6 +111,12 @@ export function TimepointCalendarApp({
   );
 
   useEffect(() => {
+    if (deepLinkSeriesId) {
+      setSection("active");
+    }
+  }, [deepLinkSeriesId, setSection]);
+
+  useEffect(() => {
     if (!hydrated || !deepLinkSeriesId || deepLinkHandledRef.current) {
       return;
     }
@@ -148,187 +159,194 @@ export function TimepointCalendarApp({
     });
   }, [pendingDeepLinkTimepointId, activeSeries, deepLinkSeriesId]);
 
+  const syncControls = (
+    <CalendarSyncControls
+      activeSeries={activeSeries}
+      pendingSeriesSwitchId={pendingSeriesSwitchId}
+      onPendingSeriesSwitchHandled={() => setPendingSeriesSwitchId(null)}
+      onConfirmSeriesSwitch={(seriesId) => dispatch({ type: "set-active-series", seriesId })}
+    />
+  );
+
   if (!hydrated) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="flex min-h-[50vh] flex-1 items-center justify-center p-6">
         <p className="text-sm text-muted-foreground">Loading your workspace...</p>
-      </main>
+      </div>
     );
   }
 
+  const mainContent =
+    section === "history" ? (
+      <div className="flex flex-1 items-center justify-center">
+        <p className="text-sm text-muted-foreground">Nothing here yet.</p>
+      </div>
+    ) : state.series.length === 0 ? (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4">
+        <p className="text-center text-muted-foreground">
+          Create your protocol to begin editing timepoints.
+        </p>
+        <Button onClick={createSeries}>Create protocol</Button>
+      </div>
+    ) : showWorkspace ? (
+      <div className="grid min-h-0 flex-1 gap-x-6 gap-y-4 lg:grid-cols-[460px_1fr]">
+        <div className="flex min-h-0 flex-col">
+          <TimepointEditor
+            series={activeSeries}
+            mode={state.offsetMode}
+            scrollContainerRef={editorScrollRef}
+            onScrollContainerScroll={(scrollTop) => setIsEditorScrolled(scrollTop > 6)}
+            showTopBarFade={isEditorScrolled}
+            highlightedTimepointId={highlightedTimepoint?.timepointId ?? null}
+            highlightedAccentColor={highlightedTimepoint?.accentColor ?? null}
+            onModeChange={(mode) => dispatch({ type: "set-offset-mode", mode })}
+            onAnchorDateTimeChange={(anchorAt) => {
+              dispatch({ type: "set-anchor-date-time", seriesId: activeSeries.id, anchorAt });
+            }}
+            onAddTimepoint={() => {
+              dispatch({ type: "add-timepoint", seriesId: activeSeries.id });
+            }}
+            onDeleteTimepoint={(timepointId) => {
+              dispatch({ type: "delete-timepoint", seriesId: activeSeries.id, timepointId });
+            }}
+            onReorderTimepoint={(fromIndex, toIndex) => {
+              dispatch({
+                type: "reorder-timepoints",
+                seriesId: activeSeries.id,
+                fromIndex,
+                toIndex,
+              });
+            }}
+            onTimepointNameChange={(timepointId, name) => {
+              dispatch({ type: "set-timepoint-name", seriesId: activeSeries.id, timepointId, name });
+            }}
+            onTimepointDescriptionChange={(timepointId, description) => {
+              dispatch({
+                type: "set-timepoint-description",
+                seriesId: activeSeries.id,
+                timepointId,
+                description,
+              });
+            }}
+            onTimepointScheduledTimeChange={(timepointId, hasScheduledTime) => {
+              dispatch({
+                type: "set-timepoint-scheduled-time",
+                seriesId: activeSeries.id,
+                timepointId,
+                hasScheduledTime,
+              });
+            }}
+            onTimepointDurationChange={(timepointId, durationMinutes) => {
+              dispatch({
+                type: "set-timepoint-duration",
+                seriesId: activeSeries.id,
+                timepointId,
+                durationMinutes,
+              });
+            }}
+            onTimepointDisplayOffsetChange={(timepointId, minutes) => {
+              dispatch({
+                type: "set-timepoint-offset",
+                seriesId: activeSeries.id,
+                timepointId,
+                minutes,
+                mode: state.offsetMode,
+                referenceBasis: "toggle",
+              });
+            }}
+            onTimepointAuthorOffsetChange={(timepointId, minutes) => {
+              dispatch({
+                type: "set-timepoint-offset",
+                seriesId: activeSeries.id,
+                timepointId,
+                minutes,
+                mode: state.offsetMode,
+                referenceBasis: "author",
+              });
+            }}
+            onTimepointAbsoluteOffsetChange={(timepointId, minutesFromStart) => {
+              dispatch({
+                type: "set-timepoint-offset",
+                seriesId: activeSeries.id,
+                timepointId,
+                minutes: minutesFromStart,
+                mode: "from-start",
+              });
+            }}
+            onTimepointRelativeReferenceChange={(timepointId, relativeToTimepointId) => {
+              dispatch({
+                type: "set-timepoint-relative-to",
+                seriesId: activeSeries.id,
+                timepointId,
+                relativeToTimepointId,
+                mode: state.offsetMode,
+              });
+            }}
+            onApplyPreset={(preset) => {
+              dispatch({
+                type: "apply-preset",
+                preset,
+                target: "replace",
+                seriesId: activeSeries.id,
+              });
+            }}
+            onApplyWeekendAvoidance={handleApplyWeekendAvoidance}
+            optimizePulseKey={optimizePulseKey}
+          />
+        </div>
+        <div className="flex min-h-0 flex-col">
+          <CalendarPreview
+            events={calendarEvents}
+            focusDate={activeSeries.anchorAt}
+            highlightedTimepointId={highlightedTimepoint?.timepointId ?? null}
+            onHoverTimepoint={setHighlightedTimepoint}
+            onEventDayChange={handleEventDayChange}
+          />
+        </div>
+      </div>
+    ) : null;
+
+  const experimentPanel = (
+    <ExperimentPanel
+      allSeries={state.series}
+      activeSeries={activeSeries}
+      activeSeriesId={state.activeSeriesId}
+      onCreateSeries={createSeries}
+      onSetActiveSeries={(seriesId) => dispatch({ type: "set-active-series", seriesId })}
+      onRequestSetActiveSeries={setPendingSeriesSwitchId}
+      onDeleteSeries={(seriesId) => dispatch({ type: "delete-series", seriesId })}
+      onSeriesNameChange={(seriesId, name) =>
+        dispatch({ type: "set-series-name", seriesId, name })
+      }
+      syncControls={state.series.length > 0 ? syncControls : undefined}
+    />
+  );
+
+  const workspaceLayout = (
+    <>
+      {experimentPanelSlot && createPortal(experimentPanel, experimentPanelSlot)}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-6 lg:overflow-hidden lg:pb-4">
+        {mainContent}
+      </div>
+    </>
+  );
+
   return (
-    <main className="min-h-screen bg-background p-4 md:p-6 lg:h-screen lg:overflow-hidden lg:pb-0">
+    <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100svh-0px)]">
       <SaveStatusIndicator status={saveStatus} />
       {deepLinkMessage ? (
-        <p className="mb-3 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+        <p className="mx-4 mt-3 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground md:mx-6">
           {deepLinkMessage}
         </p>
       ) : null}
-      <div className="h-full w-full">
-        {state.series.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 py-12">
-            <p className="text-center text-muted-foreground">
-              Create your protocol to begin editing timepoints.
-            </p>
-            <Button onClick={createSeries}>Create protocol</Button>
-          </div>
-        ) : (
-          <CalendarSyncProvider userId={user?.id ?? null} authLoading={authLoading} series={state.series}>
-            <div className="flex h-full flex-col lg:h-[calc(100vh-1.5rem)]">
-              <SeriesTabBar
-                allSeries={state.series}
-                activeSeries={activeSeries}
-                activeSeriesId={state.activeSeriesId}
-                onCreateSeries={createSeries}
-                onSetActiveSeries={(seriesId) => dispatch({ type: "set-active-series", seriesId })}
-                onRequestSetActiveSeries={setPendingSeriesSwitchId}
-                onDeleteSeries={(seriesId) => dispatch({ type: "delete-series", seriesId })}
-                onSeriesNameChange={(seriesId, name) =>
-                  dispatch({ type: "set-series-name", seriesId, name })
-                }
-                syncControls={
-                  <CalendarSyncControls
-                    activeSeries={activeSeries}
-                    pendingSeriesSwitchId={pendingSeriesSwitchId}
-                    onPendingSeriesSwitchHandled={() => setPendingSeriesSwitchId(null)}
-                    onConfirmSeriesSwitch={(seriesId) =>
-                      dispatch({ type: "set-active-series", seriesId })
-                    }
-                  />
-                }
-              />
-            <div className="grid min-h-0 flex-1 gap-x-6 gap-y-4 pt-[8px] pb-[20px] lg:grid-cols-[460px_1fr]">
-            <div className="flex min-h-0 flex-col">
-            <TimepointEditor
-              series={activeSeries}
-              mode={state.offsetMode}
-              scrollContainerRef={editorScrollRef}
-              onScrollContainerScroll={(scrollTop) => setIsEditorScrolled(scrollTop > 6)}
-              showTopBarFade={isEditorScrolled}
-              highlightedTimepointId={highlightedTimepoint?.timepointId ?? null}
-              highlightedAccentColor={highlightedTimepoint?.accentColor ?? null}
-              onModeChange={(mode) => dispatch({ type: "set-offset-mode", mode })}
-              onAnchorDateTimeChange={(anchorAt) => {
-                if (!activeSeries) return;
-                dispatch({ type: "set-anchor-date-time", seriesId: activeSeries.id, anchorAt });
-              }}
-              onAddTimepoint={() => {
-                if (!activeSeries) return;
-                dispatch({ type: "add-timepoint", seriesId: activeSeries.id });
-              }}
-              onDeleteTimepoint={(timepointId) => {
-                if (!activeSeries) return;
-                dispatch({ type: "delete-timepoint", seriesId: activeSeries.id, timepointId });
-              }}
-              onReorderTimepoint={(fromIndex, toIndex) => {
-                if (!activeSeries) return;
-                dispatch({
-                  type: "reorder-timepoints",
-                  seriesId: activeSeries.id,
-                  fromIndex,
-                  toIndex,
-                });
-              }}
-              onTimepointNameChange={(timepointId, name) => {
-                if (!activeSeries) return;
-                dispatch({ type: "set-timepoint-name", seriesId: activeSeries.id, timepointId, name });
-              }}
-              onTimepointDescriptionChange={(timepointId, description) => {
-                if (!activeSeries) return;
-                dispatch({
-                  type: "set-timepoint-description",
-                  seriesId: activeSeries.id,
-                  timepointId,
-                  description,
-                });
-              }}
-              onTimepointScheduledTimeChange={(timepointId, hasScheduledTime) => {
-                if (!activeSeries) return;
-                dispatch({
-                  type: "set-timepoint-scheduled-time",
-                  seriesId: activeSeries.id,
-                  timepointId,
-                  hasScheduledTime,
-                });
-              }}
-              onTimepointDurationChange={(timepointId, durationMinutes) => {
-                if (!activeSeries) return;
-                dispatch({
-                  type: "set-timepoint-duration",
-                  seriesId: activeSeries.id,
-                  timepointId,
-                  durationMinutes,
-                });
-              }}
-              onTimepointDisplayOffsetChange={(timepointId, minutes) => {
-                if (!activeSeries) return;
-                dispatch({
-                  type: "set-timepoint-offset",
-                  seriesId: activeSeries.id,
-                  timepointId,
-                  minutes,
-                  mode: state.offsetMode,
-                  referenceBasis: "toggle",
-                });
-              }}
-              onTimepointAuthorOffsetChange={(timepointId, minutes) => {
-                if (!activeSeries) return;
-                dispatch({
-                  type: "set-timepoint-offset",
-                  seriesId: activeSeries.id,
-                  timepointId,
-                  minutes,
-                  mode: state.offsetMode,
-                  referenceBasis: "author",
-                });
-              }}
-              onTimepointAbsoluteOffsetChange={(timepointId, minutesFromStart) => {
-                if (!activeSeries) return;
-                dispatch({
-                  type: "set-timepoint-offset",
-                  seriesId: activeSeries.id,
-                  timepointId,
-                  minutes: minutesFromStart,
-                  mode: "from-start",
-                });
-              }}
-              onTimepointRelativeReferenceChange={(timepointId, relativeToTimepointId) => {
-                if (!activeSeries) return;
-                dispatch({
-                  type: "set-timepoint-relative-to",
-                  seriesId: activeSeries.id,
-                  timepointId,
-                  relativeToTimepointId,
-                  mode: state.offsetMode,
-                });
-              }}
-              onApplyPreset={(preset) => {
-                if (!activeSeries) return;
-                dispatch({
-                  type: "apply-preset",
-                  preset,
-                  target: "replace",
-                  seriesId: activeSeries.id,
-                });
-              }}
-              onApplyWeekendAvoidance={handleApplyWeekendAvoidance}
-              optimizePulseKey={optimizePulseKey}
-            />
-            </div>
-            <div className="flex min-h-0 flex-col">
-            <CalendarPreview
-              events={calendarEvents}
-              focusDate={activeSeries?.anchorAt ?? null}
-              highlightedTimepointId={highlightedTimepoint?.timepointId ?? null}
-              onHoverTimepoint={setHighlightedTimepoint}
-              onEventDayChange={handleEventDayChange}
-            />
-            </div>
-            </div>
-            </div>
-          </CalendarSyncProvider>
-        )}
-      </div>
-    </main>
+
+      {state.series.length > 0 ? (
+        <CalendarSyncProvider userId={user?.id ?? null} authLoading={authLoading} series={state.series}>
+          {workspaceLayout}
+        </CalendarSyncProvider>
+      ) : (
+        workspaceLayout
+      )}
+    </div>
   );
 }

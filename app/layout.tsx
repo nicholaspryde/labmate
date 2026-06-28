@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { DialRoot } from "dialkit";
-import { AuthButton } from "@/components/auth/auth-button";
-import { HelpButton } from "@/components/HelpButton";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 import "dialkit/styles.css";
@@ -36,8 +34,6 @@ export default function RootLayout({
         </div>
         <Providers>
           {children}
-          <HelpButton />
-          <AuthButton />
           <DialRoot />
         </Providers>
       </body>
