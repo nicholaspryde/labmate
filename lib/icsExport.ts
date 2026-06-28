@@ -1,8 +1,11 @@
 import { strToU8, zipSync } from "fflate";
 import { createEvents } from "ics";
-import { v4 as uuid } from "uuid";
 import type { Series } from "@/lib/types";
-import { computeOffsetFromPrevious, fromTotalMinutes, resolveSeriesDates } from "@/lib/timepointMath";
+import {
+  buildSeriesEvents,
+  buildStableIcsUid,
+  DEFAULT_EVENT_DURATION_MINUTES,
+} from "@/lib/calendarEvents";
 
 export const ICS_EXPORT_ZIP_NAME = "calendar-export.zip";
 
@@ -32,27 +35,13 @@ function slugifyIcsBaseName(name: string, fallback: string): string {
 
 function buildIcs(seriesList: Series[], durationMinutes: number): string {
   const events = seriesList.flatMap((series) =>
-    resolveSeriesDates(series).map((timepoint, index) => {
-      const previousOffset = fromTotalMinutes(computeOffsetFromPrevious(series, index));
-      const start = timepoint.resolvedAt;
-      const eventDurationMinutes = timepoint.durationMinutes ?? durationMinutes;
-      const end = new Date(start.getTime() + eventDurationMinutes * 60 * 1000);
-
-      return {
-        uid: uuid(),
-        title: `${series.name} - ${timepoint.name}`,
-        start: toIcsDate(start),
-        end: toIcsDate(end),
-        description: [
-          index === 0
-            ? "Day 0 anchor"
-            : `+${previousOffset.days}d ${previousOffset.hours}h ${previousOffset.minutes}m from previous`,
-          timepoint.description.trim(),
-        ]
-          .filter(Boolean)
-          .join("\n"),
-      };
-    }),
+    buildSeriesEvents(series, { defaultDurationMinutes: durationMinutes }).map((event) => ({
+      uid: buildStableIcsUid(event.seriesId, event.timepointId),
+      title: event.title,
+      start: toIcsDate(event.start),
+      end: toIcsDate(event.end),
+      description: event.description,
+    })),
   );
 
   const { error, value } = createEvents(events);
@@ -93,7 +82,7 @@ function buildIcsZip(exports: Array<{ fileName: string; content: string }>): Uin
 
 function buildIcsExportFile(
   seriesList: Series[],
-  durationMinutes: number,
+  durationMinutes: number = DEFAULT_EVENT_DURATION_MINUTES,
   fallbackBaseName = "timepoint-series",
 ): IcsExportFile | null {
   const exports = buildSeriesIcsExports(seriesList, durationMinutes, fallbackBaseName);
@@ -178,7 +167,7 @@ function triggerBlobDownload(blob: Blob, fileName: string) {
 
 export async function exportAllSeriesAsIcs(
   seriesList: Series[],
-  durationMinutes: number,
+  durationMinutes: number = DEFAULT_EVENT_DURATION_MINUTES,
   fallbackBaseName = "timepoint-series",
 ): Promise<boolean> {
   const payload = buildIcsExportFile(seriesList, durationMinutes, fallbackBaseName);
@@ -192,3 +181,5 @@ export async function exportAllSeriesAsIcs(
 
   return true;
 }
+
+export { DEFAULT_EVENT_DURATION_MINUTES };

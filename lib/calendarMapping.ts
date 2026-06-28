@@ -2,8 +2,8 @@ import type { IlamyCalendarProps } from "@ilamy/calendar";
 
 type IlamyCalendarEvent = NonNullable<IlamyCalendarProps["events"]>[number];
 import dayjs from "@/lib/dayjs";
+import { buildSeriesEvents, DEFAULT_EVENT_DURATION_MINUTES } from "@/lib/calendarEvents";
 import type { Series } from "@/lib/types";
-import { resolveSeriesDates } from "@/lib/timepointMath";
 
 export type CalendarEventData = {
   seriesId: string;
@@ -18,36 +18,37 @@ export function formatCalendarPreviewLabel(data: CalendarEventData): string {
   return data.timepointName;
 }
 
-const DEFAULT_EVENT_DURATION_MINUTES = 60;
-
 export function mapSeriesToCalendarEvents(series: Series[]): IlamyCalendarEvent[] {
   return series.flatMap((item) =>
-    resolveSeriesDates(item).map((timepoint, index) => {
-      const durationMinutes = timepoint.durationMinutes ?? DEFAULT_EVENT_DURATION_MINUTES;
-      const end = new Date(timepoint.resolvedAt.getTime() + durationMinutes * 60 * 1000);
+    buildSeriesEvents(item, { defaultDurationMinutes: DEFAULT_EVENT_DURATION_MINUTES }).map((event) => {
+      const timepoint = item.timepoints[event.index];
+      const timepointName =
+        timepoint?.name.trim() || `Timepoint ${event.index + 1}`;
 
       return {
-        id: `${item.id}:${timepoint.id}`,
-        title: timepoint.name.trim() || `Timepoint ${index + 1}`,
-        start: dayjs(timepoint.resolvedAt),
-        end: dayjs(end),
-        color: item.color,
-        backgroundColor: item.color,
+        id: `${event.seriesId}:${event.timepointId}`,
+        title: timepointName,
+        start: dayjs(event.start),
+        end: dayjs(event.end),
+        color: event.color,
+        backgroundColor: event.color,
         data: {
-          seriesId: item.id,
-          timepointId: timepoint.id,
-          timepointNumber: index + 1,
-          timepointName: timepoint.name,
+          seriesId: event.seriesId,
+          timepointId: event.timepointId,
+          timepointNumber: event.index + 1,
+          timepointName,
           timeLabel:
-            timepoint.hasScheduledTime === true
-              ? timepoint.resolvedAt.toLocaleTimeString([], {
+            timepoint?.hasScheduledTime === true
+              ? event.start.toLocaleTimeString([], {
                   hour: "numeric",
                   minute: "2-digit",
                 })
               : "",
-          accentColor: item.color,
+          accentColor: event.color,
         } satisfies CalendarEventData,
       };
     }),
   );
 }
+
+export { DEFAULT_EVENT_DURATION_MINUTES };

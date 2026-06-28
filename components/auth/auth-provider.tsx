@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { sanitizeAuthNextPath } from "@/lib/seriesLinks";
 
 type AuthContextValue = {
   user: User | null;
@@ -11,7 +12,7 @@ type AuthContextValue = {
   isConfigured: boolean;
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithPassword: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
-  signInWithGoogle: () => Promise<{ error: string | null }>;
+  signInWithGoogle: (next?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -87,13 +88,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error?.message ?? null, needsConfirmation };
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (next?: string) => {
     const supabase = createClient();
     if (!supabase) {
       return { error: "Supabase is not configured." };
     }
 
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const safeNext = sanitizeAuthNextPath(next);
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },

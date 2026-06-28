@@ -33,6 +33,7 @@
     "dayjs": "^1.11.20",
     "dialkit": "^1.2.0",
     "fflate": "^0.8.3",
+    "googleapis": "^173.0.0",
     "ics": "^3.8.1",
     "lucide-react": "^0.552.0",
     "motion": "^12.40.0",

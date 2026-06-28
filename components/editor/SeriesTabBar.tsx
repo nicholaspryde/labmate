@@ -1,11 +1,11 @@
 "use client";
 
 import { Check, Download } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useReducedMotion } from "motion/react";
 import { ExportCalendarDialog } from "@/components/editor/ExportCalendarDialog";
 import { SeriesTab } from "@/components/editor/SeriesTab";
-import { exportAllSeriesAsIcs } from "@/lib/icsExport";
+import { DEFAULT_EVENT_DURATION_MINUTES, exportAllSeriesAsIcs } from "@/lib/icsExport";
 import type { Series } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 
 const TOOLTIP_CONTENT_CLASS = "border-0 bg-[#161616] text-white";
-const DEFAULT_EXPORT_DURATION_MINUTES = 30;
 const SERIES_NAME_PLACEHOLDER = "Add series name";
 
 function seriesDisplayName(item: Series, placeholder: string): string {
@@ -34,8 +33,10 @@ type SeriesTabBarProps = {
   activeSeriesId: string | null;
   onCreateSeries: () => void;
   onSetActiveSeries: (seriesId: string) => void;
+  onRequestSetActiveSeries?: (seriesId: string) => void;
   onDeleteSeries: (seriesId: string) => void;
   onSeriesNameChange: (seriesId: string, name: string) => void;
+  syncControls?: ReactNode;
   className?: string;
 };
 
@@ -45,8 +46,10 @@ export function SeriesTabBar({
   activeSeriesId,
   onCreateSeries,
   onSetActiveSeries,
+  onRequestSetActiveSeries,
   onDeleteSeries,
   onSeriesNameChange,
+  syncControls,
   className,
 }: SeriesTabBarProps) {
   const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null);
@@ -64,7 +67,6 @@ export function SeriesTabBar({
   const [addSeriesWidth, setAddSeriesWidth] = useState(0);
   const shouldReduceMotion = useReducedMotion();
 
-  const hasAdditionalEvents = allSeries.some((series) => series.timepoints.length > 1);
   const hasExportableSeries = allSeries.some((series) => series.timepoints.length > 0);
   const pendingDeleteSeries = deleteSeriesId
     ? (allSeries.find((item) => item.id === deleteSeriesId) ?? null)
@@ -170,7 +172,7 @@ export function SeriesTabBar({
 
     setIsExporting(true);
     try {
-      const saved = await exportAllSeriesAsIcs(allSeries, DEFAULT_EXPORT_DURATION_MINUTES);
+      const saved = await exportAllSeriesAsIcs(allSeries, DEFAULT_EVENT_DURATION_MINUTES);
       if (!saved) {
         return;
       }
@@ -201,6 +203,14 @@ export function SeriesTabBar({
       isEditing={editingSeriesId === item.id}
       showDelete={allSeries.length > 1}
       onActivate={() => {
+        if (item.id === activeSeriesId) {
+          setEditingSeriesId(item.id);
+          return;
+        }
+        if (onRequestSetActiveSeries) {
+          onRequestSetActiveSeries(item.id);
+          return;
+        }
         onSetActiveSeries(item.id);
         setEditingSeriesId(item.id);
       }}
@@ -264,42 +274,36 @@ export function SeriesTabBar({
               <div className="absolute right-0 bottom-0 z-20 bg-[#f9f9f7] pl-2">{renderAddSeriesButton()}</div>
             ) : null}
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                size="icon"
-                disabled={!hasExportableSeries || isExporting}
-                onClick={() => void handleExport()}
-                aria-label={exportIconState === "b" ? "Exported to calendar" : "Export to calendar"}
-                className={cn(
-                  "h-8 w-8 shrink-0 rounded-[12px] border-0 shadow-none",
-                  hasAdditionalEvents
-                    ? "bg-[#161616] text-white hover:bg-[#2a2a2a] hover:text-white"
-                    : "bg-[#f0f0eb] text-[#161616] hover:bg-[#e8e8e4] hover:text-[#161616]",
-                )}
-              >
-                <span
-                  className="t-icon-swap relative inline-grid size-4 shrink-0"
-                  data-state={exportIconState}
-                  aria-hidden
+          <div className="flex shrink-0 items-center gap-2 pb-1">
+            {syncControls}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  disabled={!hasExportableSeries || isExporting}
+                  onClick={() => void handleExport()}
+                  aria-label="Download .ics backup"
+                  className="h-8 w-8 shrink-0 rounded-[12px] text-[#6b7280] hover:bg-[#f0f0eb] hover:text-[#161616]"
                 >
-                  <span className="t-icon col-start-1 row-start-1 flex items-center justify-center" data-icon="a">
-                    <Download
-                      className={cn("h-4 w-4", hasAdditionalEvents ? "text-white" : "text-[#161616]")}
-                    />
+                  <span
+                    className="t-icon-swap relative inline-grid size-4 shrink-0"
+                    data-state={exportIconState}
+                    aria-hidden
+                  >
+                    <span className="t-icon col-start-1 row-start-1 flex items-center justify-center" data-icon="a">
+                      <Download className="h-4 w-4" />
+                    </span>
+                    <span className="t-icon col-start-1 row-start-1 flex items-center justify-center" data-icon="b">
+                      <Check className="h-4 w-4" strokeWidth={2.5} />
+                    </span>
                   </span>
-                  <span className="t-icon col-start-1 row-start-1 flex items-center justify-center" data-icon="b">
-                    <Check
-                      className={cn("h-4 w-4", hasAdditionalEvents ? "text-white" : "text-[#161616]")}
-                      strokeWidth={2.5}
-                    />
-                  </span>
-                </span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className={TOOLTIP_CONTENT_CLASS}>Export to calendar</TooltipContent>
-          </Tooltip>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className={TOOLTIP_CONTENT_CLASS}>Download .ics backup</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarConnectionMenuItems } from "@/components/calendar/CalendarConnectionMenu";
 import { LogIn, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -69,6 +70,7 @@ export function AuthButton({ className }: AuthButtonProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        <CalendarConnectionMenuItems />
         <DropdownMenuItem
           onSelect={() => {
             void signOut();

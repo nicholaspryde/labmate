@@ -7,6 +7,16 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { sanitizeAuthNextPath } from "@/lib/seriesLinks";
+
+function readNextPath(): string {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return sanitizeAuthNextPath(params.get("next"));
+}
 
 function GoogleIcon() {
   return (
@@ -40,6 +50,11 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [nextPath, setNextPath] = useState("/");
+
+  useEffect(() => {
+    setNextPath(readNextPath());
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -80,7 +95,7 @@ export default function LoginPage() {
         setMessage(error);
         return;
       }
-      router.push("/");
+      router.push(nextPath);
       router.refresh();
       return;
     }
@@ -98,14 +113,14 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
+    router.push(nextPath);
     router.refresh();
   };
 
   const handleGoogleSignIn = async () => {
     setMessage(null);
     setIsGoogleLoading(true);
-    const { error } = await signInWithGoogle();
+    const { error } = await signInWithGoogle(readNextPath());
     if (error) {
       setMessage(error);
       setIsGoogleLoading(false);

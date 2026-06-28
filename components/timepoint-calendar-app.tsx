@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useDeferredValue, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { CalendarSyncProvider } from "@/components/calendar/CalendarSyncProvider";
+import { CalendarSyncControls } from "@/components/calendar/CalendarSyncControls";
 import { SaveStatusIndicator } from "@/components/workspace/SaveStatusIndicator";
 import { CalendarPreview, type TimepointHoverHighlight } from "@/components/calendar/CalendarPreview";
 import { SeriesTabBar } from "@/components/editor/SeriesTabBar";
@@ -12,13 +14,25 @@ import { mapSeriesToCalendarEvents } from "@/lib/calendarMapping";
 import { initialState, seriesReducer } from "@/lib/seriesReducer";
 import type { AppState } from "@/lib/types";
 
-export function TimepointCalendarApp() {
+type TimepointCalendarAppProps = {
+  deepLinkSeriesId?: string;
+  deepLinkTimepointId?: string | null;
+};
+
+export function TimepointCalendarApp({
+  deepLinkSeriesId,
+  deepLinkTimepointId = null,
+}: TimepointCalendarAppProps = {}) {
   const { user, loading: authLoading } = useAuth();
   const [state, dispatch] = useReducer(seriesReducer, initialState);
   const [highlightedTimepoint, setHighlightedTimepoint] = useState<TimepointHoverHighlight | null>(null);
   const [optimizePulseKey, setOptimizePulseKey] = useState(0);
   const [isEditorScrolled, setIsEditorScrolled] = useState(false);
+  const [pendingSeriesSwitchId, setPendingSeriesSwitchId] = useState<string | null>(null);
+  const [pendingDeepLinkTimepointId, setPendingDeepLinkTimepointId] = useState<string | null>(null);
+  const [deepLinkMessage, setDeepLinkMessage] = useState<string | null>(null);
   const editorScrollRef = useRef<HTMLDivElement>(null);
+  const deepLinkHandledRef = useRef(false);
 
   const handleHydrate = useCallback((nextState: AppState) => {
     dispatch({ type: "replace-state", state: nextState });
@@ -91,6 +105,49 @@ export function TimepointCalendarApp() {
     [activeSeries],
   );
 
+  useEffect(() => {
+    if (!hydrated || !deepLinkSeriesId || deepLinkHandledRef.current) {
+      return;
+    }
+
+    deepLinkHandledRef.current = true;
+
+    const targetSeries = state.series.find((series) => series.id === deepLinkSeriesId);
+    if (!targetSeries) {
+      setDeepLinkMessage("Series not found.");
+      return;
+    }
+
+    dispatch({ type: "set-active-series", seriesId: deepLinkSeriesId });
+
+    if (
+      deepLinkTimepointId &&
+      targetSeries.timepoints.some((timepoint) => timepoint.id === deepLinkTimepointId)
+    ) {
+      setPendingDeepLinkTimepointId(deepLinkTimepointId);
+    }
+
+    window.history.replaceState({}, "", `/series/${deepLinkSeriesId}`);
+  }, [hydrated, deepLinkSeriesId, deepLinkTimepointId, state.series]);
+
+  useEffect(() => {
+    if (!pendingDeepLinkTimepointId || !activeSeries || activeSeries.id !== deepLinkSeriesId) {
+      return;
+    }
+
+    const timepointId = pendingDeepLinkTimepointId;
+    setPendingDeepLinkTimepointId(null);
+    setHighlightedTimepoint({
+      timepointId,
+      accentColor: activeSeries.color,
+    });
+
+    requestAnimationFrame(() => {
+      const row = document.querySelector(`[data-timepoint-id="${timepointId}"]`);
+      row?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }, [pendingDeepLinkTimepointId, activeSeries, deepLinkSeriesId]);
+
   if (!hydrated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background p-6">
@@ -102,6 +159,11 @@ export function TimepointCalendarApp() {
   return (
     <main className="min-h-screen bg-background p-4 md:p-6 lg:h-screen lg:overflow-hidden lg:pb-0">
       <SaveStatusIndicator status={saveStatus} />
+      {deepLinkMessage ? (
+        <p className="mb-3 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+          {deepLinkMessage}
+        </p>
+      ) : null}
       <div className="h-full w-full">
         {state.series.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-12">
@@ -111,18 +173,30 @@ export function TimepointCalendarApp() {
             <Button onClick={createSeries}>Create protocol</Button>
           </div>
         ) : (
-          <div className="flex h-full flex-col lg:h-[calc(100vh-1.5rem)]">
-            <SeriesTabBar
-              allSeries={state.series}
-              activeSeries={activeSeries}
-              activeSeriesId={state.activeSeriesId}
-              onCreateSeries={createSeries}
-              onSetActiveSeries={(seriesId) => dispatch({ type: "set-active-series", seriesId })}
-              onDeleteSeries={(seriesId) => dispatch({ type: "delete-series", seriesId })}
-              onSeriesNameChange={(seriesId, name) =>
-                dispatch({ type: "set-series-name", seriesId, name })
-              }
-            />
+          <CalendarSyncProvider userId={user?.id ?? null} authLoading={authLoading} series={state.series}>
+            <div className="flex h-full flex-col lg:h-[calc(100vh-1.5rem)]">
+              <SeriesTabBar
+                allSeries={state.series}
+                activeSeries={activeSeries}
+                activeSeriesId={state.activeSeriesId}
+                onCreateSeries={createSeries}
+                onSetActiveSeries={(seriesId) => dispatch({ type: "set-active-series", seriesId })}
+                onRequestSetActiveSeries={setPendingSeriesSwitchId}
+                onDeleteSeries={(seriesId) => dispatch({ type: "delete-series", seriesId })}
+                onSeriesNameChange={(seriesId, name) =>
+                  dispatch({ type: "set-series-name", seriesId, name })
+                }
+                syncControls={
+                  <CalendarSyncControls
+                    activeSeries={activeSeries}
+                    pendingSeriesSwitchId={pendingSeriesSwitchId}
+                    onPendingSeriesSwitchHandled={() => setPendingSeriesSwitchId(null)}
+                    onConfirmSeriesSwitch={(seriesId) =>
+                      dispatch({ type: "set-active-series", seriesId })
+                    }
+                  />
+                }
+              />
             <div className="grid min-h-0 flex-1 gap-x-6 gap-y-4 pt-[8px] pb-[20px] lg:grid-cols-[460px_1fr]">
             <div className="flex min-h-0 flex-col">
             <TimepointEditor
@@ -251,7 +325,8 @@ export function TimepointCalendarApp() {
             />
             </div>
             </div>
-          </div>
+            </div>
+          </CalendarSyncProvider>
         )}
       </div>
     </main>
