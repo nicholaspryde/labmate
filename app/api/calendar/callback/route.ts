@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { ensureCalendarConfigured } from "@/lib/calendar/apiHelpers";
-import { upsertCalendarConnection } from "@/lib/calendar/db";
+import { getAuthenticatedUserIdFromRequest, upsertCalendarConnection } from "@/lib/calendar/db";
 import { exchangeCodeForTokens, verifyOAuthState } from "@/lib/calendar/google/oauth";
+import { sanitizeReturnTo } from "@/lib/calendar/returnTo";
 import { encryptToken } from "@/lib/calendar/tokenCrypto";
 
 export async function GET(request: Request) {
@@ -25,6 +26,11 @@ export async function GET(request: Request) {
 
   try {
     const { userId, returnTo } = verifyOAuthState(state);
+    const sessionUserId = await getAuthenticatedUserIdFromRequest();
+    if (!sessionUserId || sessionUserId !== userId) {
+      return NextResponse.redirect(`${url.origin}/?calendar=error`);
+    }
+
     const tokens = await exchangeCodeForTokens(code, url.origin);
 
     await upsertCalendarConnection(userId, {
@@ -34,7 +40,7 @@ export async function GET(request: Request) {
       last_sync_error: null,
     });
 
-    const redirectTarget = new URL(returnTo, url.origin);
+    const redirectTarget = new URL(sanitizeReturnTo(returnTo), url.origin);
     redirectTarget.searchParams.set("calendar", "connected");
     return NextResponse.redirect(redirectTarget.toString());
   } catch {

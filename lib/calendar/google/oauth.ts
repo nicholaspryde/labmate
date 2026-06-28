@@ -6,6 +6,7 @@ import {
   getGoogleCalendarRedirectUri,
   GOOGLE_CALENDAR_SCOPE,
 } from "@/lib/calendar/env";
+import { sanitizeReturnTo } from "@/lib/calendar/returnTo";
 
 const STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -20,7 +21,9 @@ function getStateSecret(): string {
 export function createOAuthState(userId: string, returnTo?: string): string {
   const nonce = randomBytes(16).toString("hex");
   const issuedAt = Date.now().toString();
-  const payload = `${userId}.${issuedAt}.${nonce}.${returnTo ?? "/"}`;
+  const safeReturnTo = sanitizeReturnTo(returnTo);
+  const returnToEncoded = Buffer.from(safeReturnTo, "utf8").toString("base64url");
+  const payload = `${userId}.${issuedAt}.${nonce}.${returnToEncoded}`;
   const signature = createHmac("sha256", getStateSecret()).update(payload).digest("hex");
   return Buffer.from(`${payload}.${signature}`).toString("base64url");
 }
@@ -39,8 +42,13 @@ export function verifyOAuthState(state: string): { userId: string; returnTo: str
     throw new Error("Invalid OAuth state signature.");
   }
 
-  const [userId, issuedAt, , returnTo] = payload.split(".");
-  if (!userId || !issuedAt) {
+  const payloadParts = payload.split(".");
+  if (payloadParts.length !== 4) {
+    throw new Error("Invalid OAuth state payload.");
+  }
+
+  const [userId, issuedAt, , returnToEncoded] = payloadParts;
+  if (!userId || !issuedAt || !returnToEncoded) {
     throw new Error("Invalid OAuth state payload.");
   }
 
@@ -48,7 +56,8 @@ export function verifyOAuthState(state: string): { userId: string; returnTo: str
     throw new Error("OAuth state expired.");
   }
 
-  return { userId, returnTo: returnTo || "/" };
+  const returnTo = Buffer.from(returnToEncoded, "base64url").toString("utf8");
+  return { userId, returnTo: sanitizeReturnTo(returnTo) };
 }
 
 export function createOAuthClient(origin?: string) {

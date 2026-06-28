@@ -9,14 +9,13 @@ import {
   enqueuePush,
   getAuthenticatedUserIdFromRequest,
   getCalendarConnection,
-  loadUserWorkspace,
   setCalendarId,
   updateConnectionSyncStatus,
 } from "@/lib/calendar/db";
 import { createLabMateCalendar } from "@/lib/calendar/google/calendar";
+import { parsePushRequestBody } from "@/lib/calendar/requestBody";
 import { pushSeriesToGoogleCalendar } from "@/lib/calendar/syncEngine";
 import { deriveConnectionPhase } from "@/lib/calendar/types";
-import { getSeriesFromWorkspace } from "@/lib/calendar/status";
 
 export async function POST(request: Request) {
   const configured = ensureCalendarConfigured();
@@ -36,31 +35,17 @@ export async function POST(request: Request) {
     return calendarBadRequest("Invalid request body.");
   }
 
-  const seriesId =
-    typeof body === "object" && body !== null && "seriesId" in body && typeof body.seriesId === "string"
-      ? body.seriesId
-      : "";
-
-  if (!seriesId) {
-    return calendarBadRequest("seriesId is required.");
+  const parsed = parsePushRequestBody(body);
+  if ("error" in parsed) {
+    return calendarBadRequest(parsed.error);
   }
+
+  const { seriesId, series } = parsed;
 
   const connection = await getCalendarConnection(userId);
   const connectionPhase = deriveConnectionPhase(connection);
   if (connectionPhase === "not_connected") {
     return calendarBadRequest("Connect Google Calendar before pushing.");
-  }
-
-  const workspaceRaw = await loadUserWorkspace(userId);
-  if (!workspaceRaw) {
-    return calendarBadRequest("Workspace not found.");
-  }
-
-  let series;
-  try {
-    series = getSeriesFromWorkspace(workspaceRaw, seriesId);
-  } catch (error) {
-    return calendarBadRequest(error instanceof Error ? error.message : "Series not found.");
   }
 
   if (series.timepoints.length === 0) {

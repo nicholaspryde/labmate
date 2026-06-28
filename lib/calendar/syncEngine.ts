@@ -70,7 +70,9 @@ function serializeEvent(event: ResolvedCalendarEvent) {
 async function executeChunk<T>(items: T[], handler: (item: T) => Promise<void>): Promise<void> {
   for (let index = 0; index < items.length; index += CHUNK_SIZE) {
     const chunk = items.slice(index, index + CHUNK_SIZE);
-    await Promise.all(chunk.map((item) => handler(item)));
+    for (const item of chunk) {
+      await handler(item);
+    }
   }
 }
 
@@ -110,7 +112,7 @@ export async function pushSeriesToGoogleCalendar(options: {
       (item) => item.seriesId === series.id && item.timepointId === update.timepointId,
     );
     if (!event || !mapping) {
-      return;
+      throw new Error(`Missing calendar mapping for timepoint ${update.timepointId}.`);
     }
 
     const externalEventId = await patchGoogleEvent(
@@ -134,7 +136,7 @@ export async function pushSeriesToGoogleCalendar(options: {
       (item) => item.seriesId === series.id && item.timepointId === removed.timepointId,
     );
     if (!mapping) {
-      return;
+      throw new Error(`Missing calendar mapping for removed timepoint ${removed.timepointId}.`);
     }
 
     await deleteGoogleEvent(refreshTokenEncrypted, calendarId, mapping.externalEventId);

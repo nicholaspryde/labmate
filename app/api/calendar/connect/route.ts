@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ensureCalendarConfigured } from "@/lib/calendar/apiHelpers";
 import { getAuthenticatedUserIdFromRequest } from "@/lib/calendar/db";
 import { getAuthorizationUrl } from "@/lib/calendar/google/oauth";
+import { sanitizeReturnTo } from "@/lib/calendar/returnTo";
 
 export async function GET(request: Request) {
   const configured = ensureCalendarConfigured();
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const returnTo = url.searchParams.get("returnTo") ?? "/";
+  const returnTo = sanitizeReturnTo(url.searchParams.get("returnTo"));
   const origin = url.origin;
   const authUrl = getAuthorizationUrl(userId, origin, returnTo);
   return NextResponse.redirect(authUrl);

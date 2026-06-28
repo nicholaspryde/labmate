@@ -20,6 +20,10 @@ function isTimepoint(value: unknown): value is Timepoint {
   );
 }
 
+export function validateSeries(value: unknown): Series | null {
+  return isSeries(value) ? value : null;
+}
+
 function isSeries(value: unknown): value is Series {
   if (!value || typeof value !== "object") {
     return false;

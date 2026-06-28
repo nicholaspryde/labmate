@@ -4,12 +4,12 @@ import {
   calendarUnauthorizedResponse,
   ensureCalendarConfigured,
 } from "@/lib/calendar/apiHelpers";
-import { getAuthenticatedUserIdFromRequest, getCalendarConnection, loadUserWorkspace } from "@/lib/calendar/db";
+import { getAuthenticatedUserIdFromRequest, getCalendarConnection } from "@/lib/calendar/db";
+import { parsePushRequestBody } from "@/lib/calendar/requestBody";
 import { previewSeriesPush } from "@/lib/calendar/syncEngine";
 import { deriveConnectionPhase } from "@/lib/calendar/types";
-import { getSeriesFromWorkspace } from "@/lib/calendar/status";
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   const configured = ensureCalendarConfigured();
   if (configured) {
     return configured;
@@ -20,11 +20,19 @@ export async function GET(request: Request) {
     return calendarUnauthorizedResponse();
   }
 
-  const url = new URL(request.url);
-  const seriesId = url.searchParams.get("seriesId");
-  if (!seriesId) {
-    return calendarBadRequest("seriesId is required.");
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return calendarBadRequest("Invalid request body.");
   }
+
+  const parsed = parsePushRequestBody(body);
+  if ("error" in parsed) {
+    return calendarBadRequest(parsed.error);
+  }
+
+  const { series } = parsed;
 
   const connection = await getCalendarConnection(userId);
   const connectionPhase = deriveConnectionPhase(connection);
@@ -32,13 +40,7 @@ export async function GET(request: Request) {
     return calendarBadRequest("Calendar is not ready for preview.");
   }
 
-  const workspaceRaw = await loadUserWorkspace(userId);
-  if (!workspaceRaw) {
-    return calendarBadRequest("Workspace not found.");
-  }
-
   try {
-    const series = getSeriesFromWorkspace(workspaceRaw, seriesId);
     const preview = await previewSeriesPush(userId, series);
     return NextResponse.json(preview);
   } catch (error) {

@@ -94,11 +94,15 @@ export function useCalendarSync({ userId, authLoading, series }: UseCalendarSync
       }
       void (async () => {
         for (const item of queued) {
+          const seriesPayload = series.find((entry) => entry.id === item.seriesId);
+          if (!seriesPayload) {
+            continue;
+          }
           try {
             await fetch("/api/calendar/push", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ seriesId: item.seriesId }),
+              body: JSON.stringify({ seriesId: item.seriesId, series: seriesPayload }),
             });
           } catch {
             // Keep queued; user can retry manually.
@@ -110,7 +114,7 @@ export function useCalendarSync({ userId, authLoading, series }: UseCalendarSync
 
     window.addEventListener("online", handleOnline);
     return () => window.removeEventListener("online", handleOnline);
-  }, [refreshStatus, userId]);
+  }, [refreshStatus, series, userId]);
 
   const localSeriesSync = useMemo(() => {
     const connectionPhase = status?.connectionPhase ?? "not_connected";
@@ -207,16 +211,27 @@ export function useCalendarSync({ userId, authLoading, series }: UseCalendarSync
     await refreshStatus();
   }, [refreshStatus]);
 
-  const previewPush = useCallback(async (seriesId: string): Promise<PushPreviewResponse> => {
-    const response = await fetch(`/api/calendar/preview?seriesId=${encodeURIComponent(seriesId)}`, {
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-      throw new Error(payload?.error ?? "Unable to preview push.");
-    }
-    return (await response.json()) as PushPreviewResponse;
-  }, []);
+  const previewPush = useCallback(
+    async (seriesId: string): Promise<PushPreviewResponse> => {
+      const seriesPayload = series.find((item) => item.id === seriesId);
+      if (!seriesPayload) {
+        throw new Error("Series not found.");
+      }
+
+      const response = await fetch("/api/calendar/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seriesId, series: seriesPayload }),
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to preview push.");
+      }
+      return (await response.json()) as PushPreviewResponse;
+    },
+    [series],
+  );
 
   const queuePush = useCallback(async (seriesId: string) => {
     await fetch("/api/calendar/queue", {
@@ -233,6 +248,11 @@ export function useCalendarSync({ userId, authLoading, series }: UseCalendarSync
         throw new Error("Sign in to push to Google Calendar.");
       }
 
+      const seriesPayload = series.find((item) => item.id === seriesId);
+      if (!seriesPayload) {
+        throw new Error("Series not found.");
+      }
+
       if (isBrowserOffline()) {
         await queuePush(seriesId);
         return null;
@@ -245,7 +265,7 @@ export function useCalendarSync({ userId, authLoading, series }: UseCalendarSync
         const response = await fetch("/api/calendar/push", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ seriesId }),
+          body: JSON.stringify({ seriesId, series: seriesPayload }),
         });
 
         const payload = (await response.json().catch(() => null)) as
@@ -269,7 +289,7 @@ export function useCalendarSync({ userId, authLoading, series }: UseCalendarSync
         setPushingSeriesId(null);
       }
     },
-    [queuePush, refreshStatus, userId],
+    [queuePush, refreshStatus, series, userId],
   );
 
   const getLocalSeriesHash = useCallback((item: Series) => buildSeriesContentHash(item), []);
