@@ -189,7 +189,7 @@ export function TimepointCalendarApp({
         <Button onClick={createSeries}>Create protocol</Button>
       </div>
     ) : showWorkspace ? (
-      <div className="grid min-h-0 flex-1 gap-x-6 gap-y-4 lg:grid-cols-[460px_1fr]">
+      <div className="grid min-h-0 flex-1 gap-x-6 gap-y-4 lg:grid-cols-[360px_1fr]">
         <div className="flex min-h-0 flex-col">
           <TimepointEditor
             series={activeSeries}

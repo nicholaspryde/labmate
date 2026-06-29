@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DialRoot } from "dialkit";
+import { InterfaceKit } from "interface-kit/react";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 import "dialkit/styles.css";
@@ -35,6 +36,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <DialRoot />
+          {process.env.NODE_ENV === "development" && <InterfaceKit />}
         </Providers>
       </body>
     </html>
