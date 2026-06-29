@@ -325,7 +325,7 @@ export function TimepointCalendarApp({
   const workspaceLayout = (
     <>
       {experimentPanelSlot && createPortal(experimentPanel, experimentPanelSlot)}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-6 lg:overflow-hidden lg:pb-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4 lg:overflow-hidden lg:pb-4">
         {mainContent}
       </div>
     </>
