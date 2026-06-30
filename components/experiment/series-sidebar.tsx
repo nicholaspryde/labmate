@@ -170,9 +170,9 @@ export function SeriesSidebar({
           <button
             type="button"
             onClick={handleCreateSeries}
-            className="flex w-full items-center gap-2 rounded-md pl-1.5 pr-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+            className="flex w-full items-center gap-2 rounded-md pl-1 pr-2 py-1.5 text-[12px] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
           >
-            <Plus className="h-4 w-4 shrink-0" aria-hidden />
+            <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
             <span>New series</span>
           </button>
         </div>
