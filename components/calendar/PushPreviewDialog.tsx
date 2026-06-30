@@ -58,7 +58,7 @@ export function PushPreviewDialog({
         </DialogHeader>
 
         {preview ? (
-          <div className="space-y-2 rounded-md border bg-white p-3 text-sm">
+          <div className="space-y-2 rounded-md border bg-card p-3 text-sm">
             {preview.summary.updated > 0 ? (
               <p>{preview.summary.updated} event{preview.summary.updated === 1 ? "" : "s"} updated</p>
             ) : null}
@@ -66,7 +66,7 @@ export function PushPreviewDialog({
               <p>{preview.summary.added} event{preview.summary.added === 1 ? "" : "s"} added</p>
             ) : null}
             {preview.summary.removed > 0 ? (
-              <p className="text-[#9b1c1c]">
+              <p className="text-status-error-fg">
                 {preview.summary.removed} event{preview.summary.removed === 1 ? "" : "s"} removed
               </p>
             ) : null}
@@ -79,7 +79,7 @@ export function PushPreviewDialog({
         ) : null}
 
         {confirmRemoval ? (
-          <p className="rounded-md border border-[#f5c2c2] bg-[#fff5f5] px-3 py-2 text-sm text-[#9b1c1c]">
+          <p className="rounded-md border border-status-error-border bg-status-error-bg-subtle px-3 py-2 text-sm text-status-error-fg">
             {preview?.summary.removed ?? 0} event
             {(preview?.summary.removed ?? 0) === 1 ? "" : "s"} will be removed from your Google
             Calendar. Continue?

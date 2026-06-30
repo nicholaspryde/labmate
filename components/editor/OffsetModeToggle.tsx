@@ -51,7 +51,7 @@ export function OffsetModeToggle({ value, onChange }: OffsetModeToggleProps) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button type="button" variant="toolbar" className="gap-1.5 px-2" aria-label="Offset mode">
-          <Clock className="size-3 shrink-0 text-[#161616]" aria-hidden />
+          <Clock className="size-3 shrink-0 text-foreground" aria-hidden />
           {selectedOption.shortLabel}
           <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
         </Button>
@@ -75,13 +75,13 @@ export function OffsetModeToggle({ value, onChange }: OffsetModeToggleProps) {
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004cff]/40 focus-visible:ring-offset-1",
                   isSelected
                     ? "border-[#004cff] bg-[#dfe8ff]"
-                    : "border-[#e3e3e3] bg-white hover:border-[#d4d4d4] hover:bg-[#fafaf8]",
+                    : "border-border bg-white hover:border-[#d4d4d4] hover:bg-[#fafaf8]",
                 )}
               >
                 <span
                   className={cn(
                     "text-[13px] font-medium leading-snug",
-                    isSelected ? "text-[#082872]" : "text-[#161616]",
+                    isSelected ? "text-[#082872]" : "text-foreground",
                   )}
                 >
                   {option.label}

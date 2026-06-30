@@ -45,7 +45,7 @@ export function SeriesTab({
 
   const tabClassName = cn(
     "relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-1.5 pb-2.5 pt-1 text-[16px] font-medium transition-colors duration-spring-moderate",
-    isActive ? "text-[#161616]" : "text-[#6b6b74] hover:text-[#161616]",
+    isActive ? "text-foreground" : "text-[#6b6b74] hover:text-foreground",
   );
 
   const colorDot = (
@@ -93,7 +93,7 @@ export function SeriesTab({
       aria-label={placeholder}
       tabIndex={isEditing ? 0 : -1}
       className={cn(
-        "absolute inset-0 w-full min-w-0 border-0 bg-transparent p-0 text-[16px] font-medium text-[#161616] outline-none transition-opacity duration-spring-moderate placeholder:text-[#a8adb5]",
+        "absolute inset-0 w-full min-w-0 border-0 bg-transparent p-0 text-[16px] font-medium text-foreground outline-none transition-opacity duration-spring-moderate placeholder:text-[#a8adb5]",
         isEditing ? "opacity-100" : "pointer-events-none opacity-0",
       )}
     />
@@ -107,7 +107,7 @@ export function SeriesTab({
         event.stopPropagation();
         onDelete();
       }}
-      className="pointer-events-none absolute top-[calc(0.25rem+(100%-0.875rem)/2)] right-0.5 z-20 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded bg-[#f9f9f7] text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
+      className="pointer-events-none absolute top-[calc(0.25rem+(100%-0.875rem)/2)] right-0.5 z-20 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded bg-background text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-accent hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
     >
       <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden>
         <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

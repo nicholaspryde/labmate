@@ -98,7 +98,7 @@ function Calendar({
         week: cn("mt-2 flex w-full", defaultClassNames.week),
         day: cn("relative aspect-square h-full w-full p-0 text-center select-none", defaultClassNames.day),
         today: cn("rounded-md bg-accent text-accent-foreground", defaultClassNames.today),
-        outside: cn("text-[#c5c8cd]", defaultClassNames.outside),
+        outside: cn("text-muted-foreground opacity-60", defaultClassNames.outside),
         disabled: cn("text-muted-foreground opacity-50", defaultClassNames.disabled),
         hidden: cn("invisible", defaultClassNames.hidden),
         ...classNames,

@@ -111,7 +111,7 @@ export function ExportCalendarDialog({
                         style={{ backgroundColor: summary.color }}
                         aria-hidden
                       />
-                      <span className="min-w-0 flex-1 truncate font-medium text-[#161616]">
+                      <span className="min-w-0 flex-1 truncate font-medium text-foreground">
                         {summary.name}
                       </span>
                       <span className="shrink-0 text-xs text-muted-foreground">
@@ -124,7 +124,7 @@ export function ExportCalendarDialog({
 
               <p
                 className={cn(
-                  "rounded-md border border-[#c8e6d0] bg-[#e8f5eb] px-3 py-2.5 text-sm leading-snug text-[#1a5232]",
+                  "rounded-md border border-status-success-border bg-status-success-bg px-3 py-2.5 text-sm leading-snug text-status-success-fg",
                 )}
               >
                 {delightMessage}

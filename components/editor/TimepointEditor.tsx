@@ -332,7 +332,7 @@ export function TimepointEditor({
     <div className="flex min-h-0 flex-1 flex-col">
       <div
         className={cn(
-          "relative z-20 flex shrink-0 flex-col gap-2 bg-[#f9f9f7] px-3 pb-0",
+          "relative z-20 flex shrink-0 flex-col gap-2 bg-background px-3 pb-0",
           showTopBarFade && "shadow-[0_4px_12px_-8px_rgba(0,0,0,0.1)]",
         )}
       >
@@ -357,8 +357,8 @@ export function TimepointEditor({
               placeholder="Untitled series"
               aria-label="Series name"
               className={cn(
-                "min-w-0 flex-1 truncate rounded-[8px] -mx-1.5 -my-1 px-1.5 py-1 border-0 bg-transparent text-sm font-medium text-foreground outline-none transition-colors placeholder:text-muted-foreground",
-                onSeriesNameChange ? "cursor-text hover:bg-[#f0f0eb]" : "cursor-default select-none",
+                "min-w-0 flex-1 truncate rounded-lg -mx-1.5 -my-1 px-1.5 py-1 border-0 bg-transparent text-sm font-medium text-foreground outline-none transition-colors placeholder:text-muted-foreground",
+                onSeriesNameChange ? "cursor-text hover:bg-accent" : "cursor-default select-none",
               )}
             />
 
@@ -455,7 +455,7 @@ export function TimepointEditor({
               role="status"
               aria-live="polite"
             >
-              <span className="pointer-events-auto flex items-center gap-1.5 rounded-[8px] bg-white px-3 py-2 text-[13px] font-medium whitespace-nowrap text-[#161616] shadow-[0_4px_12px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.04)]">
+              <span className="pointer-events-auto flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[13px] font-medium whitespace-nowrap text-foreground shadow-[0_4px_12px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.04)]">
                 {isOptimizeSuccessMessage(optimizeMessage) ? (
                   <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 ) : null}
@@ -557,7 +557,7 @@ export function TimepointEditor({
             variant="ghost"
             data-add-timepoint-button
             className={cn(
-              "h-12 w-full cursor-pointer gap-2 rounded-[12px] bg-[#f0f0eb] text-[12px] font-medium tracking-[0.16px] text-[#161616] transition-colors duration-spring-fast hover:bg-[#e8e8e4] hover:text-[#161616] active:bg-[#e8e8e4]",
+              "h-12 w-full cursor-pointer gap-2 rounded-xl bg-accent text-[12px] font-medium tracking-wide-label text-foreground transition-colors duration-spring-fast hover:bg-[#e8e8e4] hover:text-foreground active:bg-[#e8e8e4]",
               isAddTimepointPressed && "bg-[#e8e8e4]",
             )}
             animate={

@@ -20,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const TOOLTIP_CONTENT_CLASS = "border-0 bg-[#161616] text-white";
+const TOOLTIP_CONTENT_CLASS = "border-0 bg-primary text-primary-foreground";
 const SERIES_NAME_PLACEHOLDER = "Untitled series";
 
 function seriesDisplayName(item: Series, placeholder: string): string {
@@ -232,7 +232,7 @@ export function SeriesTabBar({
       aria-label="Add series"
       className="relative inline-flex shrink-0 items-center pb-2.5 pt-1"
     >
-      <span className="inline-flex items-center rounded-[12px] px-1.5 py-0.5 text-[12px] font-medium text-[#8f959e] transition-colors duration-spring-moderate hover:text-[#1e1e1a]">
+      <span className="inline-flex items-center rounded-xl px-1.5 py-0.5 text-[12px] font-medium text-[#8f959e] transition-colors duration-spring-moderate hover:text-[#1e1e1a]">
         + Series
       </span>
     </button>
@@ -240,11 +240,11 @@ export function SeriesTabBar({
 
   return (
     <>
-      <div className={cn("relative z-20 shrink-0 bg-[#f9f9f7] px-3 pb-3", className)}>
+      <div className={cn("relative z-20 shrink-0 bg-background px-3 pb-3", className)}>
         <div className="flex items-end gap-2">
           <div
             ref={tabTrackRef}
-            className="relative flex min-w-0 flex-1 items-end border-b border-[#e3e3e3]"
+            className="relative flex min-w-0 flex-1 items-end border-b border-border"
           >
             <ScrollArea
               orientation="horizontal"
@@ -271,7 +271,7 @@ export function SeriesTabBar({
               </div>
             </ScrollArea>
             {tabsOverflow ? (
-              <div className="absolute right-0 bottom-0 z-20 bg-[#f9f9f7] pl-2">{renderAddSeriesButton()}</div>
+              <div className="absolute right-0 bottom-0 z-20 bg-background pl-2">{renderAddSeriesButton()}</div>
             ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-2 pb-1">
@@ -285,7 +285,7 @@ export function SeriesTabBar({
                   disabled={!hasExportableSeries || isExporting}
                   onClick={() => void handleExport()}
                   aria-label="Download .ics backup"
-                  className="h-8 w-8 shrink-0 rounded-[12px] text-[#6b7280] hover:bg-[#f0f0eb] hover:text-[#161616]"
+                  className="h-8 w-8 shrink-0 rounded-xl text-[#6b7280] hover:bg-accent hover:text-foreground"
                 >
                   <span
                     className="t-icon-swap relative inline-grid size-4 shrink-0"

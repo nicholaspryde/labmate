@@ -58,12 +58,14 @@ export function SyncBadge({ state, lastPublishedAt, onClick, className }: SyncBa
       onClick={clickable ? onClick : undefined}
       disabled={!clickable}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
-        state === "synced" && "bg-[#e8f5eb] text-[#1a5232]",
-        (state === "unsynced" || state === "ready") && "bg-[#fff4df] text-[#7a4d00] hover:bg-[#ffe8bf]",
-        state === "syncing" && "bg-[#eef2ff] text-[#334155]",
-        state === "error" && "bg-[#fdecec] text-[#9b1c1c] hover:bg-[#fcd9d9]",
-        state === "queued" && "bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb]",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-2xs font-medium transition-colors",
+        state === "synced" && "bg-status-success-bg text-status-success-fg",
+        (state === "unsynced" || state === "ready") &&
+          "bg-status-warning-bg text-status-warning-fg hover:bg-status-warning-bg-hover",
+        state === "syncing" && "bg-status-info-bg text-status-info-fg",
+        state === "error" && "bg-status-error-bg text-status-error-fg hover:bg-status-error-bg-hover",
+        state === "queued" &&
+          "bg-status-neutral-bg text-status-neutral-fg hover:bg-status-neutral-bg-hover",
         !clickable && "cursor-default",
         className,
       )}

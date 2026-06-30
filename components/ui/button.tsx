@@ -13,7 +13,7 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         toolbar:
-          "h-8 shrink-0 rounded-[12px] px-3 text-[12px] font-medium tracking-[0.16px] text-[#161616] hover:bg-[#f0f0eb] hover:text-[#161616]",
+          "h-8 shrink-0 rounded-xl px-3 text-xs font-medium tracking-wide-label text-foreground hover:bg-accent hover:text-accent-foreground",
       },
       size: {
         default: "h-10 px-4 py-2",

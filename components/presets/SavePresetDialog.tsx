@@ -110,7 +110,7 @@ export function SavePresetDialog({
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#dfe8ff] text-[10px] font-medium text-[#4c69b3]">
                   {item.index}
                 </span>
-                <span className="min-w-0 flex-1 truncate font-medium text-[#161616]">{item.label}</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-foreground">{item.label}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">{item.offsetLabel}</span>
               </li>
             ))}

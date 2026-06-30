@@ -91,7 +91,7 @@ export function SeriesListItem({
         className={cn(
           "flex w-full min-w-0 items-center gap-2 rounded-md py-1.5 pr-2 pl-2 text-left text-sm transition-colors",
           isActive
-            ? "bg-[#f0f0eb] text-foreground"
+            ? "bg-accent text-foreground"
             : isHistory
               ? "text-muted-foreground/70 hover:bg-secondary/60 hover:text-foreground"
               : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",

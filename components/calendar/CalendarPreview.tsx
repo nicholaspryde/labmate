@@ -40,7 +40,7 @@ const ActiveSeriesContext = createContext<string | null>(null);
 const DEFAULT_ACCENT = "#6c96ff";
 /** ilamy entrance stagger (0.05s × ~7) + 0.2s motion duration */
 const CALENDAR_ENTRANCE_MS = 400;
-const TOOLTIP_CONTENT_CLASS = "max-w-xs border-0 bg-[#161616] text-white";
+const TOOLTIP_CONTENT_CLASS = "max-w-xs border-0 bg-primary text-primary-foreground";
 const EVENT_TOOLTIP_DELAY_MS = 500;
 
 function isTextTruncated(element: HTMLElement | null) {

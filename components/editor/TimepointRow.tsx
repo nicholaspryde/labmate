@@ -180,21 +180,21 @@ function formatTimeLabel(resolvedAt: Date, hour: number, minute: number): string
 function timeOptionButtonClassName(isSelected: boolean) {
   return cn(
     "flex w-full cursor-pointer items-center rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent",
-    isSelected && "bg-[#f0f0eb] font-medium text-[#161616] hover:bg-[#ebebe5]",
+    isSelected && "bg-accent font-medium text-foreground hover:bg-[#ebebe5]",
   );
 }
 
 function relativePickerOptionClassName(isSelected: boolean) {
   return cn(
     "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent",
-    isSelected && "font-medium text-[#161616]",
+    isSelected && "font-medium text-foreground",
   );
 }
 
 function RelativePickerCheck({ selected }: { selected: boolean }) {
   return (
     <span className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
-      {selected ? <Check className="h-3.5 w-3.5 text-[#161616]" strokeWidth={2.5} /> : null}
+      {selected ? <Check className="h-3.5 w-3.5 text-foreground" strokeWidth={2.5} /> : null}
     </span>
   );
 }
@@ -316,7 +316,7 @@ function isRelativeOffsetSuggestionActive(minutes: number, displayOffsetMinutes:
 function relativeOffsetSuggestionClassName(isActive: boolean, isGenerated: boolean) {
   return cn(
     "flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2.5 py-2 text-left text-sm outline-none hover:bg-accent",
-    (isActive || isGenerated) && "bg-[#f0f0eb] font-medium text-[#161616] hover:bg-[#ebebe5]",
+    (isActive || isGenerated) && "bg-accent font-medium text-foreground hover:bg-[#ebebe5]",
   );
 }
 
@@ -400,7 +400,7 @@ function RelativeOffsetDropdown({
           onOpenChange(!open);
         }}
         className={cn(
-          "inline-flex h-8 min-w-0 max-w-full items-center rounded-[4px] text-left font-normal text-[#1e1e1a] hover:bg-[#f4f4f0]",
+          "inline-flex h-8 min-w-0 max-w-full items-center rounded-sm text-left font-normal text-[#1e1e1a] hover:bg-[#f4f4f0]",
           open && "bg-[#f4f4f0]",
           triggerClassName,
         )}
@@ -800,7 +800,7 @@ export function TimepointRow({
       : endTimeOptions;
   const timeFieldClassName = (filled: boolean) =>
     cn(
-      "h-8 w-auto min-w-[3rem] rounded-[4px] border-0 bg-white px-1 py-0 text-left text-[14px] font-normal shadow-none transition-colors duration-spring-moderate hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0",
+      "h-8 w-auto min-w-[3rem] rounded-sm border-0 bg-white px-1 py-0 text-left text-[14px] font-normal shadow-none transition-colors duration-spring-moderate hover:bg-[#f4f4f0] focus:bg-[#f4f4f0] focus-visible:ring-0",
       filled ? "text-[#1e1e1a]" : "text-[#a8adb5]",
     );
   const startTimeFilled = hasScheduledTime || startTimeInput.trim().length > 0;
@@ -975,7 +975,7 @@ export function TimepointRow({
       data-timepoint-id={id}
     >
       <div
-        className="rounded-[8px] bg-white transition-[box-shadow] duration-spring-moderate ease-out"
+        className="rounded-lg bg-white transition-[box-shadow] duration-spring-moderate ease-out"
         style={{
           boxShadow: isHighlighted
             ? highlightedSurfaceShadow(highlightAccentColor ?? "#004cff")
@@ -987,7 +987,7 @@ export function TimepointRow({
         onMouseEnter={() => setIsSurfaceHovered(true)}
         onMouseLeave={() => setIsSurfaceHovered(false)}
       >
-        <div className="timepoint-event-card group overflow-hidden rounded-[8px] border-0 p-3 transition-colors duration-spring-moderate">
+        <div className="timepoint-event-card group overflow-hidden rounded-lg border-0 p-3 transition-colors duration-spring-moderate">
       <motion.div
         className="relative"
         initial={
@@ -1006,7 +1006,7 @@ export function TimepointRow({
             type="button"
             aria-label="Delete timepoint"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="pointer-events-none absolute right-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
+            className="pointer-events-none absolute right-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-accent hover:text-[#6b6b74] group-hover:pointer-events-auto group-hover:opacity-100"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -1030,7 +1030,7 @@ export function TimepointRow({
             placeholder={isAnchor ? "Add first event name" : "Add event name"}
             className={cn(
               "h-8 min-w-0 w-full border-0 bg-transparent px-1 py-0 text-[14px] font-normal shadow-none transition-colors duration-spring-moderate ease-out focus-visible:ring-0 placeholder:text-[#a8adb5] hover:placeholder:text-[#8f959e] focus:placeholder:text-[#8f959e] [&::placeholder]:transition-[color] [&::placeholder]:duration-spring-moderate [&::placeholder]:ease-out",
-              name.trim() ? "text-[#1e1e1a]" : "text-[#161616]/70 hover:text-[#161616] focus:text-[#161616]",
+              name.trim() ? "text-[#1e1e1a]" : "text-foreground/70 hover:text-foreground focus:text-foreground",
             )}
             onFocus={onFocus}
             aria-label={isAnchor ? "Add first event name" : "Add event name"}
@@ -1078,8 +1078,8 @@ export function TimepointRow({
                     ref={setRelativeToPickerAnchorEl}
                     type="button"
                     className={cn(
-                      "inline-flex h-8 min-w-0 max-w-[16rem] items-center rounded-[4px] px-1 text-[14px] font-normal whitespace-nowrap text-[#1e1e1a] hover:bg-[#f0f0eb]",
-                      relativeToPickerOpen && "bg-[#f0f0eb]",
+                      "inline-flex h-8 min-w-0 max-w-[16rem] items-center rounded-sm px-1 text-[14px] font-normal whitespace-nowrap text-[#1e1e1a] hover:bg-accent",
+                      relativeToPickerOpen && "bg-accent",
                     )}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -1222,14 +1222,14 @@ export function TimepointRow({
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex h-8 w-full min-w-0 items-center justify-start whitespace-nowrap rounded-md border-0 bg-transparent py-0 pl-1 pr-1 text-left text-[13px] font-normal text-[#1e1e1a] shadow-none hover:bg-[#f0f0eb]"
+                          className="inline-flex h-8 w-full min-w-0 items-center justify-start whitespace-nowrap rounded-md border-0 bg-transparent py-0 pl-1 pr-1 text-left text-[13px] font-normal text-[#1e1e1a] shadow-none hover:bg-accent"
                           aria-label="Choose event day"
                         >
                           {formattedDateLabel}
                         </button>
                       </PopoverTrigger>
                       <PopoverContent
-                        className="w-auto overflow-hidden rounded-[12px] !bg-white p-0"
+                        className="w-auto overflow-hidden rounded-xl !bg-white p-0"
                         align="start"
                         collisionPadding={8}
                       >
@@ -1345,7 +1345,7 @@ export function TimepointRow({
                       })}
                     </AnchoredList>
                   </div>
-                  <span className="px-1 text-[14px] text-[#161616]">-</span>
+                  <span className="px-1 text-[14px] text-foreground">-</span>
                   <div ref={setEndTimeAnchorEl} className="relative h-8 w-fit">
                     <Input
                       ref={endTimeInputRef}
@@ -1441,7 +1441,7 @@ export function TimepointRow({
                     <button
                       type="button"
                       aria-label="Remove time"
-                      className="ml-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-[#f0f0eb] hover:text-[#6b6b74] group-hover/time:opacity-100 focus-visible:opacity-100"
+                      className="ml-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[#a8adb5] opacity-0 transition-opacity duration-spring-moderate hover:bg-accent hover:text-[#6b6b74] group-hover/time:opacity-100 focus-visible:opacity-100"
                       onClick={(event) => {
                         event.stopPropagation();
                         clearScheduledTime();
