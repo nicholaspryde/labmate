@@ -1,5 +1,5 @@
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { Sparkles } from "lucide-react";
+import { Archive, ArchiveRestore, BookmarkPlus, Download, MoreHorizontal, Sparkles, Trash2 } from "lucide-react";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -13,13 +13,32 @@ import {
   effectiveRelativeToTimepointId,
   resolveSeriesDates,
 } from "@/lib/timepointMath";
+import { ExportCalendarDialog } from "@/components/editor/ExportCalendarDialog";
 import { AvoidWeekendsButton, isOptimizeSuccessMessage } from "@/components/editor/AvoidWeekendsButton";
 import { TimepointRow } from "@/components/editor/TimepointRow";
 import { OffsetModeToggle } from "@/components/editor/OffsetModeToggle";
 import { PresetsMenu } from "@/components/presets/PresetsMenu";
+import { SavePresetDialog } from "@/components/presets/SavePresetDialog";
 import type { ProtocolPreset } from "@/lib/presets/types";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
+import { DEFAULT_EVENT_DURATION_MINUTES, exportAllSeriesAsIcs } from "@/lib/icsExport";
+import { DISABLE_AUTOFILL_INPUT_PROPS } from "@/lib/autofill";
 import { cn } from "@/lib/utils";
 import { spring } from "@/lib/springs";
 
@@ -51,6 +70,14 @@ type TimepointEditorProps = {
   onApplyPreset: (preset: ProtocolPreset) => void;
   onApplyWeekendAvoidance?: (deltaDays: number) => void;
   optimizePulseKey?: number;
+  // Series-level actions surfaced in the header
+  renameFocusKey?: number;
+  onSeriesNameChange?: (name: string) => void;
+  onArchiveSeries?: () => void;
+  onUnarchiveSeries?: () => void;
+  onDeleteSeries?: () => void;
+  canDeleteSeries?: boolean;
+  isSeriesHistory?: boolean;
 };
 
 export function TimepointEditor({
@@ -77,6 +104,13 @@ export function TimepointEditor({
   onApplyPreset,
   onApplyWeekendAvoidance,
   optimizePulseKey = 0,
+  renameFocusKey = 0,
+  onSeriesNameChange,
+  onArchiveSeries,
+  onUnarchiveSeries,
+  onDeleteSeries,
+  canDeleteSeries = false,
+  isSeriesHistory = false,
 }: TimepointEditorProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [activeTimepointId, setActiveTimepointId] = useState<string | null>(null);
@@ -85,6 +119,11 @@ export function TimepointEditor({
   const [addAnimationKey, setAddAnimationKey] = useState(0);
   const [optimizeMessage, setOptimizeMessage] = useState<string | null>(null);
   const [isAddTimepointPressed, setIsAddTimepointPressed] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [savePresetOpen, setSavePresetOpen] = useState(false);
+  const [exportModalSeries, setExportModalSeries] = useState<typeof series>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const pendingNameFocusRef = useRef(false);
   const pendingScrollTimepointIdRef = useRef<string | null>(null);
   const shouldReduceMotion = useReducedMotion();
@@ -189,10 +228,30 @@ export function TimepointEditor({
     return () => window.clearTimeout(timeoutId);
   }, [activeTimepointId, scrollContainerRef, shouldReduceMotion]);
 
+  // Triggered when the sidebar "Rename" action selects + requests focus.
+  useLayoutEffect(() => {
+    if (!renameFocusKey) {
+      return;
+    }
+    setIsEditingName(true);
+    nameInputRef.current?.focus();
+    nameInputRef.current?.select();
+  }, [renameFocusKey]);
+
   const handleAddTimepoint = () => {
     pendingNameFocusRef.current = true;
     setAddAnimationKey((key) => key + 1);
     onAddTimepoint();
+  };
+
+  const handleDownload = async () => {
+    if (!series) {
+      return;
+    }
+    const saved = await exportAllSeriesAsIcs([series], DEFAULT_EVENT_DURATION_MINUTES);
+    if (saved) {
+      setExportModalSeries(series);
+    }
   };
 
   useEffect(() => {
@@ -278,6 +337,104 @@ export function TimepointEditor({
           showTopBarFade && "shadow-[0_4px_12px_-8px_rgba(0,0,0,0.1)]",
         )}
       >
+        <div className="flex items-center gap-2 pt-1">
+          <span
+            className="inline-block h-2 w-2 shrink-0 translate-y-px rounded-full ml-[10px]"
+            style={{ backgroundColor: series.color }}
+            aria-hidden
+          />
+          {isEditingName && onSeriesNameChange ? (
+            <input
+              ref={nameInputRef}
+              value={series.name}
+              {...DISABLE_AUTOFILL_INPUT_PROPS}
+              onChange={(event) => onSeriesNameChange(event.target.value)}
+              onBlur={() => setIsEditingName(false)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === "Escape") {
+                  event.preventDefault();
+                  setIsEditingName(false);
+                }
+              }}
+              placeholder="Series name"
+              aria-label="Series name"
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (onSeriesNameChange) {
+                  setIsEditingName(true);
+                }
+              }}
+              className={cn(
+                "min-w-0 flex-1 truncate rounded-[8px] px-1.5 py-1 -mx-1.5 -my-1 text-left text-sm font-medium transition-colors",
+                onSeriesNameChange ? "!cursor-text hover:bg-[#f0f0eb]" : "cursor-default",
+                series.name.trim() ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {series.name.trim() || "Untitled series"}
+            </button>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Series options"
+                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+              >
+                <MoreHorizontal className="h-4 w-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {isSeriesHistory ? (
+                onUnarchiveSeries ? (
+                  <DropdownMenuItem className="gap-2" onSelect={onUnarchiveSeries}>
+                    <ArchiveRestore className="h-4 w-4" aria-hidden />
+                    Move to Active
+                  </DropdownMenuItem>
+                ) : null
+              ) : (
+                onArchiveSeries ? (
+                  <DropdownMenuItem className="gap-2" onSelect={onArchiveSeries}>
+                    <Archive className="h-4 w-4" aria-hidden />
+                    Archive
+                  </DropdownMenuItem>
+                ) : null
+              )}
+              <DropdownMenuItem className="gap-2" onSelect={() => setSavePresetOpen(true)}>
+                <BookmarkPlus className="h-4 w-4" aria-hidden />
+                Save as preset
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2" onSelect={() => void handleDownload()}>
+                <Download className="h-4 w-4" aria-hidden />
+                Download .ics
+              </DropdownMenuItem>
+              {canDeleteSeries && onDeleteSeries ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                    onSelect={() => {
+                      if (series.timepoints.length > 1) {
+                        setDeleteConfirmOpen(true);
+                      } else {
+                        onDeleteSeries();
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1">
             <OffsetModeToggle value={mode} onChange={onModeChange} />
@@ -432,6 +589,45 @@ export function TimepointEditor({
         </motion.div>
         </div>
       </div>
+
+      <SavePresetDialog
+        open={savePresetOpen}
+        onOpenChange={setSavePresetOpen}
+        series={series}
+        offsetMode={mode}
+      />
+
+      <ExportCalendarDialog
+        open={exportModalSeries !== null}
+        onOpenChange={(open) => { if (!open) setExportModalSeries(null); }}
+        seriesList={exportModalSeries ? [exportModalSeries] : []}
+      />
+
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete {series.name.trim() || "this series"}?</DialogTitle>
+            <DialogDescription>
+              This will remove all events in this series. This can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                onDeleteSeries?.();
+              }}
+            >
+              Delete series
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

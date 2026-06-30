@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { AppNavigationProvider } from "@/components/app-navigation-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ExperimentPanelSlotContext } from "@/components/workspace/workspace-chrome-context";
@@ -32,9 +31,5 @@ function AppShellLayout({ children }: AppShellProps) {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  return (
-    <AppNavigationProvider>
-      <AppShellLayout>{children}</AppShellLayout>
-    </AppNavigationProvider>
-  );
+  return <AppShellLayout>{children}</AppShellLayout>;
 }

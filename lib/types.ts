@@ -22,6 +22,8 @@ export type Series = {
   color: string;
   anchorAt: string;
   timepoints: Timepoint[];
+  /** When true, the series is forced into History regardless of its event dates. */
+  archived?: boolean;
 };
 
 export type AppState = {

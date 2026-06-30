@@ -5,6 +5,14 @@ import { useEffect, useState } from "react";
 import { SavePresetDialog } from "@/components/presets/SavePresetDialog";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -14,6 +22,16 @@ import {
 import { deleteSavedPreset, listSavedPresets } from "@/lib/presets/storage";
 import type { ProtocolPreset } from "@/lib/presets/types";
 import type { OffsetMode, Series } from "@/lib/types";
+
+/** Whether the user has built out the series beyond a single empty anchor event. */
+function hasUserContent(series: Series): boolean {
+  if (series.timepoints.length > 1) {
+    return true;
+  }
+  return series.timepoints.some(
+    (timepoint) => timepoint.name.trim().length > 0 || timepoint.description.trim().length > 0,
+  );
+}
 
 type PresetsMenuProps = {
   series: Series;
@@ -25,6 +43,7 @@ export function PresetsMenu({ series, offsetMode, onApplyPreset }: PresetsMenuPr
   const [savedPresets, setSavedPresets] = useState(() => listSavedPresets());
   const [open, setOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [pendingPreset, setPendingPreset] = useState<ProtocolPreset | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -33,8 +52,19 @@ export function PresetsMenu({ series, offsetMode, onApplyPreset }: PresetsMenuPr
   }, [open]);
 
   const handleApply = (preset: ProtocolPreset) => {
-    onApplyPreset(preset);
     setOpen(false);
+    if (hasUserContent(series)) {
+      setPendingPreset(preset);
+      return;
+    }
+    onApplyPreset(preset);
+  };
+
+  const handleConfirmApply = () => {
+    if (pendingPreset) {
+      onApplyPreset(pendingPreset);
+    }
+    setPendingPreset(null);
   };
 
   const handleSaved = () => {
@@ -95,6 +125,26 @@ export function PresetsMenu({ series, offsetMode, onApplyPreset }: PresetsMenuPr
         offsetMode={offsetMode}
         onSaved={handleSaved}
       />
+
+      <Dialog open={pendingPreset !== null} onOpenChange={(next) => !next && setPendingPreset(null)}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Apply &ldquo;{pendingPreset?.name}&rdquo; to this series?</DialogTitle>
+            <DialogDescription>
+              This replaces the current series&apos; events with the preset&apos;s structure. Your
+              existing events in this series will be overwritten. This can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setPendingPreset(null)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleConfirmApply}>
+              Apply preset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Archive } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { CalendarSyncProvider } from "@/components/calendar/CalendarSyncProvider";
 import { CalendarSyncControls } from "@/components/calendar/CalendarSyncControls";
@@ -10,11 +11,12 @@ import { CalendarPreview, type TimepointHoverHighlight } from "@/components/cale
 import { ExperimentPanel } from "@/components/experiment/experiment-panel";
 import { TimepointEditor } from "@/components/editor/TimepointEditor";
 import { Button } from "@/components/ui/button";
-import { useAppNavigation } from "@/components/app-navigation-provider";
 import { useExperimentPanelSlot } from "@/components/workspace/workspace-chrome-context";
+import { isSeriesHistory } from "@/lib/seriesStatus";
 import { useWorkspaceSync } from "@/hooks/use-workspace-sync";
 import { mapSeriesToCalendarEvents } from "@/lib/calendarMapping";
 import { initialState, seriesReducer } from "@/lib/seriesReducer";
+import { cn } from "@/lib/utils";
 import type { AppState } from "@/lib/types";
 
 type TimepointCalendarAppProps = {
@@ -27,13 +29,13 @@ export function TimepointCalendarApp({
   deepLinkTimepointId = null,
 }: TimepointCalendarAppProps = {}) {
   const { user, loading: authLoading } = useAuth();
-  const { section, setSection } = useAppNavigation();
   const experimentPanelSlot = useExperimentPanelSlot();
   const [state, dispatch] = useReducer(seriesReducer, initialState);
   const [highlightedTimepoint, setHighlightedTimepoint] = useState<TimepointHoverHighlight | null>(null);
   const [optimizePulseKey, setOptimizePulseKey] = useState(0);
   const [isEditorScrolled, setIsEditorScrolled] = useState(false);
   const [pendingSeriesSwitchId, setPendingSeriesSwitchId] = useState<string | null>(null);
+  const [seriesRenameFocusKey, setSeriesRenameFocusKey] = useState(0);
   const [pendingDeepLinkTimepointId, setPendingDeepLinkTimepointId] = useState<string | null>(null);
   const [deepLinkMessage, setDeepLinkMessage] = useState<string | null>(null);
   const editorScrollRef = useRef<HTMLDivElement>(null);
@@ -56,7 +58,8 @@ export function TimepointCalendarApp({
     null;
   const deferredSeries = useDeferredValue(state.series);
   const calendarEvents = useMemo(() => mapSeriesToCalendarEvents(deferredSeries), [deferredSeries]);
-  const showWorkspace = section === "active" && state.series.length > 0 && activeSeries;
+  const showWorkspace = state.series.length > 0 && activeSeries;
+  const isActiveSeriesHistory = activeSeries ? isSeriesHistory(activeSeries) : false;
 
   const createSeries = () => {
     dispatch({ type: "create-series", name: "" });
@@ -109,12 +112,6 @@ export function TimepointCalendarApp({
     },
     [activeSeries],
   );
-
-  useEffect(() => {
-    if (deepLinkSeriesId) {
-      setSection("active");
-    }
-  }, [deepLinkSeriesId, setSection]);
 
   useEffect(() => {
     if (!hydrated || !deepLinkSeriesId || deepLinkHandledRef.current) {
@@ -177,11 +174,7 @@ export function TimepointCalendarApp({
   }
 
   const mainContent =
-    section === "history" ? (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted-foreground">Nothing here yet.</p>
-      </div>
-    ) : state.series.length === 0 ? (
+    state.series.length === 0 ? (
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
         <p className="text-center text-muted-foreground">
           Create your protocol to begin editing timepoints.
@@ -189,7 +182,22 @@ export function TimepointCalendarApp({
         <Button onClick={createSeries}>Create protocol</Button>
       </div>
     ) : showWorkspace ? (
-      <div className="grid min-h-0 flex-1 gap-x-6 gap-y-4 lg:grid-cols-[360px_1fr]">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        {isActiveSeriesHistory ? (
+          <div className="flex shrink-0 items-center gap-2 rounded-md border border-border bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+            <Archive className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>
+              This series is in History — its events are all in the past or it was archived. You can
+              still edit it.
+            </span>
+          </div>
+        ) : null}
+        <div
+          className={cn(
+            "grid min-h-0 flex-1 gap-x-6 gap-y-4 lg:grid-cols-[360px_1fr]",
+            isActiveSeriesHistory && "opacity-90 [filter:grayscale(0.55)]",
+          )}
+        >
         <div className="flex min-h-0 flex-col">
           <TimepointEditor
             series={activeSeries}
@@ -292,6 +300,19 @@ export function TimepointCalendarApp({
             }}
             onApplyWeekendAvoidance={handleApplyWeekendAvoidance}
             optimizePulseKey={optimizePulseKey}
+            renameFocusKey={seriesRenameFocusKey}
+            onSeriesNameChange={(name) =>
+              dispatch({ type: "set-series-name", seriesId: activeSeries.id, name })
+            }
+            onArchiveSeries={() =>
+              dispatch({ type: "set-series-archived", seriesId: activeSeries.id, archived: true })
+            }
+            onUnarchiveSeries={() =>
+              dispatch({ type: "set-series-archived", seriesId: activeSeries.id, archived: false })
+            }
+            onDeleteSeries={() => dispatch({ type: "delete-series", seriesId: activeSeries.id })}
+            canDeleteSeries={state.series.length > 1}
+            isSeriesHistory={isActiveSeriesHistory}
           />
         </div>
         <div className="flex min-h-0 flex-col">
@@ -303,6 +324,7 @@ export function TimepointCalendarApp({
             onEventDayChange={handleEventDayChange}
           />
         </div>
+        </div>
       </div>
     ) : null;
 
@@ -311,13 +333,24 @@ export function TimepointCalendarApp({
       allSeries={state.series}
       activeSeries={activeSeries}
       activeSeriesId={state.activeSeriesId}
+      offsetMode={state.offsetMode}
       onCreateSeries={createSeries}
       onSetActiveSeries={(seriesId) => dispatch({ type: "set-active-series", seriesId })}
       onRequestSetActiveSeries={setPendingSeriesSwitchId}
       onDeleteSeries={(seriesId) => dispatch({ type: "delete-series", seriesId })}
+      onArchiveSeries={(seriesId) =>
+        dispatch({ type: "set-series-archived", seriesId, archived: true })
+      }
+      onUnarchiveSeries={(seriesId) =>
+        dispatch({ type: "set-series-archived", seriesId, archived: false })
+      }
       onSeriesNameChange={(seriesId, name) =>
         dispatch({ type: "set-series-name", seriesId, name })
       }
+      onRenameSeries={(seriesId) => {
+        dispatch({ type: "set-active-series", seriesId });
+        setSeriesRenameFocusKey((k) => k + 1);
+      }}
       syncControls={state.series.length > 0 ? syncControls : undefined}
     />
   );

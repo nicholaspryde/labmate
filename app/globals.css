@@ -2,6 +2,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Radix ScrollArea injects a `display:table; min-width:100%` wrapper that
+   expands to fit white-space:nowrap descendants, breaking truncation. Override
+   to flow-root (a BFC block) so the wrapper fills the viewport width only. */
+[data-slot="scroll-area-viewport"] > div {
+  display: flow-root !important;
+  min-width: 100%;
+}
+
 @plugin "tailwindcss-animate";
 
 @source "../app/**/*.{ts,tsx}";

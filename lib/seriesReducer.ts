@@ -23,6 +23,7 @@ export type SeriesAction =
   | { type: "create-series"; name: string }
   | { type: "delete-series"; seriesId: string }
   | { type: "set-active-series"; seriesId: string | null }
+  | { type: "set-series-archived"; seriesId: string; archived: boolean }
   | { type: "set-offset-mode"; mode: OffsetMode }
   | { type: "set-series-name"; seriesId: string; name: string }
   | { type: "set-anchor-date-time"; seriesId: string; anchorAt: string }
@@ -167,6 +168,11 @@ export function seriesReducer(state: AppState, action: SeriesAction): AppState {
     }
     case "set-active-series":
       return { ...state, activeSeriesId: action.seriesId };
+    case "set-series-archived":
+      return updateSeries(state, action.seriesId, (series) => ({
+        ...series,
+        archived: action.archived ? true : undefined,
+      }));
     case "set-offset-mode":
       return { ...state, offsetMode: action.mode };
     case "set-series-name":
