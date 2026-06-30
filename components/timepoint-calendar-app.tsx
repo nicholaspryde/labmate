@@ -319,6 +319,7 @@ export function TimepointCalendarApp({
           <CalendarPreview
             events={calendarEvents}
             focusDate={activeSeries.anchorAt}
+            activeSeriesId={state.activeSeriesId}
             highlightedTimepointId={highlightedTimepoint?.timepointId ?? null}
             onHoverTimepoint={setHighlightedTimepoint}
             onEventDayChange={handleEventDayChange}

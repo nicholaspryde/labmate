@@ -5,7 +5,7 @@ import {
   useIlamyCalendarContext,
   type CalendarEvent,
 } from "@ilamy/calendar";
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { createContext, memo, useContext, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import dayjs from "@/lib/dayjs";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { formatCalendarPreviewLabel, type CalendarEventData } from "@/lib/calendarMapping";
@@ -29,10 +29,13 @@ export type TimepointHoverHighlight = {
 type CalendarPreviewProps = {
   events: Parameters<typeof IlamyCalendar>[0]["events"];
   focusDate: string | null;
+  activeSeriesId: string | null;
   highlightedTimepointId: string | null;
   onHoverTimepoint: (highlight: TimepointHoverHighlight | null) => void;
   onEventDayChange: (change: CalendarEventDayChange) => void;
 };
+
+const ActiveSeriesContext = createContext<string | null>(null);
 
 const DEFAULT_ACCENT = "#6c96ff";
 /** ilamy entrance stagger (0.05s × ~7) + 0.2s motion duration */
@@ -77,6 +80,7 @@ type EventChipProps = {
 };
 
 function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChipProps) {
+  const activeSeriesId = useContext(ActiveSeriesContext);
   const { view } = useIlamyCalendarContext();
   const titleRef = useRef<HTMLSpanElement>(null);
   const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -93,6 +97,8 @@ function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChi
     eventData?.timepointName?.trim() || previewTitle || String(event.title);
   const isHighlighted =
     Boolean(timepointId) && timepointId === highlightedTimepointId;
+  const isInactiveSeries =
+    activeSeriesId !== null && eventData?.seriesId !== activeSeriesId;
   const isCompact = view === "month" || view === "year";
 
   const clearTooltipTimer = () => {
@@ -138,6 +144,7 @@ function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChi
             className={cn(
               "calendar-event-chip calendar-event-chip--compact",
               isHighlighted && "calendar-event-chip--highlighted",
+              isInactiveSeries && "calendar-event-chip--inactive",
             )}
             style={chipStyle}
             onMouseEnter={handleMouseEnter}
@@ -156,6 +163,7 @@ function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChi
             className={cn(
               "calendar-event-chip",
               isHighlighted && "calendar-event-chip--highlighted",
+              isInactiveSeries && "calendar-event-chip--inactive",
             )}
             style={chipStyle}
             onMouseEnter={handleMouseEnter}
@@ -183,6 +191,7 @@ function EventChip({ event, highlightedTimepointId, onHoverTimepoint }: EventChi
 function CalendarPreviewImpl({
   events,
   focusDate,
+  activeSeriesId,
   highlightedTimepointId,
   onHoverTimepoint,
   onEventDayChange,
@@ -332,6 +341,7 @@ function CalendarPreviewImpl({
       >
       <div className="min-h-0 flex-1">
         {mounted ? (
+          <ActiveSeriesContext.Provider value={activeSeriesId}>
           <IlamyCalendar
             events={events}
             initialView="month"
@@ -355,6 +365,7 @@ function CalendarPreviewImpl({
               />
             )}
           />
+          </ActiveSeriesContext.Provider>
         ) : null}
       </div>
       </div>

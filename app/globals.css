@@ -564,6 +564,15 @@
     animation: none !important;
   }
 
+  /* Dim events outside the active series so the selected series stands out.
+     Must come after — and beat the !important of — the static-suppression
+     rule above, which otherwise forces every event chip to full opacity. */
+  [data-calendar-static] [data-testid="ilamy-calendar"] .calendar-event-chip--inactive,
+  [data-testid="ilamy-calendar"] .calendar-event-chip--inactive {
+    opacity: 0.25 !important;
+    transition: opacity 0.2s ease !important;
+  }
+
   /* Inline text link — lift + underline darkening on hover */
   .hover-link {
     position: relative;
