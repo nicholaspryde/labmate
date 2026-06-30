@@ -1,7 +1,7 @@
 "use client";
 
 import { Archive, ArchiveRestore, BookmarkPlus, Download, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useRef, useState, type RefObject } from "react";
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Series } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const FADE_WIDTH = 32; // px — width of the right-side fade zone
 
 type SeriesListItemProps = {
   item: Series;
@@ -32,7 +34,7 @@ type SeriesListItemProps = {
 
 export function SeriesListItem({
   item,
-  placeholder = "Add series name",
+  placeholder = "Untitled series",
   isActive,
   isHistory = false,
   canDelete = false,
@@ -51,17 +53,45 @@ export function SeriesListItem({
   const hasName = item.name.trim().length > 0;
   const displayText = hasName ? item.name : placeholder;
 
+  const textContainerRef = useRef<HTMLDivElement>(null);
+  const textSpanRef = useRef<HTMLSpanElement>(null);
+  const [isMarqueeActive, setIsMarqueeActive] = useState(false);
+  const [marqueeScrollPx, setMarqueeScrollPx] = useState(0);
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!textContainerRef.current || !textSpanRef.current) return;
+    setHasOverflow(textSpanRef.current.scrollWidth > textContainerRef.current.clientWidth);
+  }, [displayText]);
+
+  const handleRowMouseEnter = () => {
+    if (!textContainerRef.current || !textSpanRef.current) return;
+    const overflow = textSpanRef.current.scrollWidth - textContainerRef.current.clientWidth;
+    if (overflow > 0) {
+      setMarqueeScrollPx(overflow + FADE_WIDTH);
+      setIsMarqueeActive(true);
+    }
+  };
+
+  const handleRowMouseLeave = () => {
+    setIsMarqueeActive(false);
+  };
+
   return (
-    <div className="group relative min-w-0 w-full">
+    <div
+      className="group relative min-w-0 w-full"
+      onMouseEnter={handleRowMouseEnter}
+      onMouseLeave={handleRowMouseLeave}
+    >
       <button
         ref={itemRef}
         type="button"
         onClick={onActivate}
         aria-current={isActive ? "true" : undefined}
         className={cn(
-          "flex w-full min-w-0 overflow-hidden items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-left text-sm transition-colors",
+          "flex w-full min-w-0 items-center gap-2 rounded-md py-1.5 pr-2 pl-2 text-left text-sm transition-colors",
           isActive
-            ? "bg-secondary text-foreground"
+            ? "bg-[#f0f0eb] text-foreground"
             : isHistory
               ? "text-muted-foreground/70 hover:bg-secondary/60 hover:text-foreground"
               : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
@@ -75,9 +105,25 @@ export function SeriesListItem({
           }}
           aria-hidden
         />
-        <span className={cn("min-w-0 flex-1 truncate", !hasName && "text-muted-foreground/70")}>
-          {displayText}
-        </span>
+        <div
+          ref={textContainerRef}
+          className="relative min-w-0 flex-1 overflow-hidden"
+          style={hasOverflow ? { maskImage: `linear-gradient(to right, black calc(100% - ${FADE_WIDTH}px), transparent 100%)` } : undefined}
+        >
+          <span
+            ref={textSpanRef}
+            className={cn("inline-block whitespace-nowrap", !hasName && "text-muted-foreground/70")}
+            style={isMarqueeActive ? {
+              animationName: "series-marquee",
+              animationDuration: "4s",
+              animationTimingFunction: "ease-in-out",
+              animationFillMode: "forwards",
+              "--marquee-px": `${marqueeScrollPx}px`,
+            } as React.CSSProperties : undefined}
+          >
+            {displayText}
+          </span>
+        </div>
       </button>
 
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -87,8 +133,8 @@ export function SeriesListItem({
             aria-label="Series options"
             onClick={(event) => event.stopPropagation()}
             className={cn(
-              "absolute top-1/2 right-1 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-opacity hover:bg-background hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100",
-              menuOpen ? "opacity-100" : "opacity-0",
+              "absolute top-1/2 right-1 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-[opacity,background-color] focus-visible:opacity-100 group-hover:opacity-100 group-hover:bg-[#e8e8e4] group-hover:text-foreground hover:bg-[#d8d8d2] active:bg-[#ccccc6]",
+              menuOpen ? "opacity-100 bg-[#e8e8e4] text-foreground" : "opacity-0",
             )}
           >
             <MoreHorizontal className="h-4 w-4" aria-hidden />

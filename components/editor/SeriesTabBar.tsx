@@ -21,7 +21,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 
 const TOOLTIP_CONTENT_CLASS = "border-0 bg-[#161616] text-white";
-const SERIES_NAME_PLACEHOLDER = "Add series name";
+const SERIES_NAME_PLACEHOLDER = "Untitled series";
 
 function seriesDisplayName(item: Series, placeholder: string): string {
   return item.name.trim() || placeholder;

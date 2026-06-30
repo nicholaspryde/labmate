@@ -19,7 +19,7 @@ import { DEFAULT_EVENT_DURATION_MINUTES, exportAllSeriesAsIcs } from "@/lib/icsE
 import { partitionSeries } from "@/lib/seriesStatus";
 import type { OffsetMode, Series } from "@/lib/types";
 
-const SERIES_NAME_PLACEHOLDER = "Add series name";
+const SERIES_NAME_PLACEHOLDER = "Untitled series";
 
 function seriesDisplayName(item: Series, placeholder: string): string {
   return item.name.trim() || placeholder;

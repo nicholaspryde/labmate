@@ -119,7 +119,7 @@ export function TimepointEditor({
   const [addAnimationKey, setAddAnimationKey] = useState(0);
   const [optimizeMessage, setOptimizeMessage] = useState<string | null>(null);
   const [isAddTimepointPressed, setIsAddTimepointPressed] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
+
   const [savePresetOpen, setSavePresetOpen] = useState(false);
   const [exportModalSeries, setExportModalSeries] = useState<typeof series>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -233,7 +233,6 @@ export function TimepointEditor({
     if (!renameFocusKey) {
       return;
     }
-    setIsEditingName(true);
     nameInputRef.current?.focus();
     nameInputRef.current?.select();
   }, [renameFocusKey]);
@@ -343,40 +342,25 @@ export function TimepointEditor({
             style={{ backgroundColor: series.color }}
             aria-hidden
           />
-          {isEditingName && onSeriesNameChange ? (
-            <input
+          <input
               ref={nameInputRef}
               value={series.name}
               {...DISABLE_AUTOFILL_INPUT_PROPS}
-              onChange={(event) => onSeriesNameChange(event.target.value)}
-              onBlur={() => setIsEditingName(false)}
+              readOnly={!onSeriesNameChange}
+              onChange={(event) => onSeriesNameChange?.(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === "Escape") {
                   event.preventDefault();
-                  setIsEditingName(false);
+                  nameInputRef.current?.blur();
                 }
               }}
-              placeholder="Series name"
+              placeholder="Untitled series"
               aria-label="Series name"
-              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                if (onSeriesNameChange) {
-                  setIsEditingName(true);
-                }
-              }}
               className={cn(
-                "min-w-0 flex-1 truncate rounded-[8px] px-1.5 py-1 -mx-1.5 -my-1 text-left text-sm font-medium transition-colors",
-                onSeriesNameChange ? "!cursor-text hover:bg-[#f0f0eb]" : "cursor-default",
-                series.name.trim() ? "text-foreground" : "text-muted-foreground",
+                "min-w-0 flex-1 truncate rounded-[8px] -mx-1.5 -my-1 px-1.5 py-1 border-0 bg-transparent text-sm font-medium text-foreground outline-none transition-colors placeholder:text-muted-foreground",
+                onSeriesNameChange ? "cursor-text hover:bg-[#f0f0eb]" : "cursor-default select-none",
               )}
-            >
-              {series.name.trim() || "Untitled series"}
-            </button>
-          )}
+            />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
