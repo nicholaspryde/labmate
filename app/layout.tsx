@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DialRoot } from "dialkit";
 import { InterfaceKit } from "interface-kit/react";
+import { Agentation } from "agentation";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 import "dialkit/styles.css";
@@ -37,6 +38,7 @@ export default function RootLayout({
           {children}
           <DialRoot />
           {process.env.NODE_ENV === "development" && <InterfaceKit />}
+          {process.env.NODE_ENV === "development" && <Agentation endpoint="http://localhost:4747" />}
         </Providers>
       </body>
     </html>

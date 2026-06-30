@@ -41,3 +41,6 @@ playwright/.cache/
 
 # cursor
 .cursor/
+
+# claude code
+.claude/
