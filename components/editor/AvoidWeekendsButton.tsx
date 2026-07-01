@@ -4,12 +4,15 @@ import { Sparkles } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   buildWeekendAvoidanceSuggestion,
   shouldOfferWeekendAvoidance,
 } from "@/lib/timepointMath";
 import type { Series } from "@/lib/types";
 import { spring } from "@/lib/springs";
+
+const TOOLTIP_CONTENT_CLASS = "border-0 bg-primary text-primary-foreground";
 
 type AvoidWeekendsButtonProps = {
   series: Series;
@@ -73,17 +76,22 @@ export function AvoidWeekendsButton({ series, onApply, onMessage }: AvoidWeekend
           }
           transition={spring.moderate}
         >
-          <Button
-            type="button"
-            variant="toolbar"
-            aria-label="Optimize"
-            title="Shift dates to minimize weekends"
-            className="gap-1.5"
-            onClick={handleOptimize}
-          >
-            <Sparkles className="h-3 w-3 shrink-0" aria-hidden />
-            Optimize
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="toolbar"
+                aria-label="Optimize"
+                className="w-8 justify-center px-0"
+                onClick={handleOptimize}
+              >
+                <Sparkles className="h-3 w-3 shrink-0" aria-hidden />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className={TOOLTIP_CONTENT_CLASS}>
+              Optimize · Shift dates to minimize weekends
+            </TooltipContent>
+          </Tooltip>
         </motion.div>
       ) : null}
     </AnimatePresence>

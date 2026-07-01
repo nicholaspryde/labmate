@@ -437,7 +437,7 @@ export function TimepointEditor({
       <div
         ref={scrollContainerRef}
         onScroll={(event) => onScrollContainerScroll?.(event.currentTarget.scrollTop)}
-        className="scrollbar-thin relative min-h-0 flex-1 overflow-y-auto px-3 pb-8 pt-3"
+        className="scrollbar-thin relative min-h-0 flex-1 overflow-y-auto px-3 pt-3 pb-24"
       >
         <AnimatePresence initial={false}>
           {optimizeMessage ? (
@@ -557,8 +557,8 @@ export function TimepointEditor({
             variant="ghost"
             data-add-timepoint-button
             className={cn(
-              "h-12 w-full cursor-pointer gap-2 rounded-xl bg-accent text-[12px] font-medium tracking-wide-label text-foreground transition-colors duration-spring-fast hover:bg-[#e8e8e4] hover:text-foreground active:bg-[#e8e8e4]",
-              isAddTimepointPressed && "bg-[#e8e8e4]",
+              "h-12 w-full cursor-pointer gap-2 rounded-xl bg-[#e8e8e4] text-[12px] font-medium tracking-wide-label text-foreground transition-colors duration-spring-fast hover:bg-[#d8d8d2] hover:text-foreground active:bg-[#ccccc6]",
+              isAddTimepointPressed && "bg-[#ccccc6]",
             )}
             animate={
               shouldReduceMotion ? undefined : { scale: isAddTimepointPressed ? ADD_EVENT_PRESS_SCALE : 1 }

@@ -149,6 +149,10 @@ export function SeriesSidebar({
       canUnarchive={isHistory && item.archived === true}
       itemRef={item.id === activeSeriesId ? activeSeriesItemRef : undefined}
       onActivate={() => {
+        if (!item.name.trim() && item.id !== activeSeriesId) {
+          onRenameSeries(item.id);
+          return;
+        }
         onSetActiveSeries(item.id);
       }}
       onDelete={() => handleDeleteSeriesRequest(item.id)}
@@ -166,14 +170,14 @@ export function SeriesSidebar({
   return (
     <>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 px-2 pt-2">
+        <div className="shrink-0 px-2 pt-2 pb-2">
           <button
             type="button"
             onClick={handleCreateSeries}
-            className="flex w-full items-center gap-2 rounded-md pl-1 pr-2 py-1.5 text-[12px] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+            className="flex w-full items-center gap-2 rounded-md pl-1 pr-2 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span>New series</span>
+            <span className="font-medium">New series</span>
           </button>
         </div>
 

@@ -63,6 +63,7 @@ export function TimepointCalendarApp({
 
   const createSeries = () => {
     dispatch({ type: "create-series", name: "" });
+    setSeriesRenameFocusKey((key) => key + 1);
   };
 
   const handleEventDayChange = useCallback(
@@ -194,7 +195,7 @@ export function TimepointCalendarApp({
         ) : null}
         <div
           className={cn(
-            "grid min-h-0 flex-1 gap-x-6 gap-y-4 lg:grid-cols-[360px_1fr]",
+            "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-x-6 gap-y-4 lg:grid-cols-[360px_1fr]",
             isActiveSeriesHistory && "opacity-90 [filter:grayscale(0.55)]",
           )}
         >
@@ -315,7 +316,7 @@ export function TimepointCalendarApp({
             isSeriesHistory={isActiveSeriesHistory}
           />
         </div>
-        <div className="flex min-h-0 flex-col">
+        <div className="flex min-h-0 flex-col lg:pb-4">
           <CalendarPreview
             events={calendarEvents}
             focusDate={activeSeries.anchorAt}
@@ -359,14 +360,14 @@ export function TimepointCalendarApp({
   const workspaceLayout = (
     <>
       {experimentPanelSlot && createPortal(experimentPanel, experimentPanelSlot)}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4 lg:overflow-hidden lg:pb-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4 lg:overflow-hidden lg:pb-0">
         {mainContent}
       </div>
     </>
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:h-[calc(100svh-0px)]">
+    <div className="flex min-h-0 flex-1 basis-auto flex-col lg:h-[calc(100svh-0px)]">
       <SaveStatusIndicator status={saveStatus} />
       {deepLinkMessage ? (
         <p className="mx-4 mt-3 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground md:mx-6">

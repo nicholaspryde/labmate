@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { AccountMenu } from "@/components/auth/account-menu";
 import { HelpMenu } from "@/components/help/help-menu";
@@ -22,8 +23,8 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" tooltip="Labmate">
               <Link href="/">
-                <span className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  L
+                <span className="flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+                  <Image src="/android-chrome-192x192.png" alt="" width={32} height={32} className="size-full object-cover" />
                 </span>
                 <span className="truncate font-semibold">Labmate</span>
               </Link>
