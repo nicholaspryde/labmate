@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ExperimentPanelSlotContext } from "@/components/workspace/workspace-chrome-context";
 
 type AppShellProps = {
@@ -14,14 +13,9 @@ function AppShellLayout({ children }: AppShellProps) {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
       {/* slot for ExperimentPanel — portalled here from TimepointCalendarApp */}
       <div ref={setSlot} className="hidden shrink-0 md:block md:w-60" />
       <SidebarInset className="flex min-h-svh flex-col">
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4 md:hidden">
-          <SidebarTrigger />
-          <span className="text-sm font-medium">Labmate</span>
-        </header>
         <ExperimentPanelSlotContext.Provider value={slot}>
           {children}
         </ExperimentPanelSlotContext.Provider>

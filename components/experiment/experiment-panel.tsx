@@ -1,7 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { AccountMenu } from "@/components/auth/account-menu";
+import { HelpMenu } from "@/components/help/help-menu";
 import { SeriesSidebar } from "@/components/experiment/series-sidebar";
+import { SettingsDialog } from "@/components/settings/settings-dialog";
+import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import type { OffsetMode, Series } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +68,20 @@ export function ExperimentPanel({
         onRenameSeries={onRenameSeries}
         syncControls={syncControls}
       />
+
+      <div className="mt-auto shrink-0 border-t border-border p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <AccountMenu />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SettingsDialog />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <HelpMenu />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </div>
     </aside>
   );
 }
